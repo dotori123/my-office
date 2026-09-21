@@ -1,0 +1,281 @@
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import type { Leave } from '@/types'
+import { useApp } from '@/store/AppContext'
+import { Badge, Band, Button, Card, EmptyState, Field, Input, Modal, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { fmtShort, today, weekdayKo } from '@/utils/date'
+import { fmtDays } from '@/utils/format'
+import { summarizeLeaves } from '@/utils/leave'
+import LeaveForm from './LeaveForm'
+import LeaveRecommend from './LeaveRecommend'
+import LeaveImport from './LeaveImport'
+
+type Tab = 'status' | 'history' | 'recommend'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'status', label: '연차 현황' },
+  { key: 'history', label: '사용 내역' },
+  { key: 'recommend', label: '연차 추천' },
+]
+
+export default function LeavePage() {
+  const { state, dispatch } = useApp()
+  const { leaves, settings } = state
+  const [params, setParams] = useSearchParams()
+  const tab = (params.get('tab') as Tab) || 'status'
+  const setTab = (t: Tab) => setParams(t === 'status' ? {} : { tab: t })
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<Leave | null>(null)
+  const [preset, setPreset] = useState<{ start: string; end: string } | undefined>()
+  const [settingOpen, setSettingOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+
+  const summary = summarizeLeaves(leaves, settings.totalLeave)
+
+  const openNew = (p?: { start: string; end: string }) => {
+    setEditing(null)
+    setPreset(p)
+    setFormOpen(true)
+  }
+  const openEdit = (l: Leave) => {
+    setEditing(l)
+    setPreset(undefined)
+    setFormOpen(true)
+  }
+
+  return (
+    <>
+      <Band inner="pb-8 pt-14 md:pb-10 md:pt-20">
+        <PageHero
+          eyebrow={`${settings.year}년`}
+          title="연차"
+          sub={`${fmtDays(summary.remaining)} 남았어요. 사용 ${fmtDays(summary.used)}, 예정 ${fmtDays(summary.planned)}.`}
+          action={
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                붙여넣기로 가져오기
+              </Button>
+              <Button onClick={() => openNew()}>연차 등록</Button>
+            </div>
+          }
+        />
+        <div className="mt-10 flex justify-center">
+          <Tabs tabs={TABS} value={tab} onChange={setTab} />
+        </div>
+      </Band>
+
+      <Band tone="gray">
+        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} onEditTotal={() => setSettingOpen(true)} />}
+        {tab === 'history' && (
+          <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={(id) => dispatch({ type: 'leave/remove', id })} />
+        )}
+        {tab === 'recommend' && <LeaveRecommend remaining={summary.remaining} onApply={(s, e) => openNew({ start: s, end: e })} />}
+      </Band>
+
+      <LeaveImport open={importOpen} onClose={() => setImportOpen(false)} />
+      <LeaveForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} presetDates={preset} />
+      <TotalLeaveModal open={settingOpen} onClose={() => setSettingOpen(false)} />
+    </>
+  )
+}
+
+/* ---------- 연차 현황 ---------- */
+function StatusTab({
+  summary,
+  leaves,
+  onEditTotal,
+}: {
+  summary: ReturnType<typeof summarizeLeaves>
+  leaves: Leave[]
+  onEditTotal: () => void
+}) {
+  const base = today()
+  const upcoming = leaves.filter((l) => l.startDate > base).sort((a, b) => a.startDate.localeCompare(b.startDate))
+
+  const monthly = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => {
+        const m = String(i + 1).padStart(2, '0')
+        return leaves.filter((l) => l.startDate.slice(5, 7) === m).reduce((s, l) => s + l.amount, 0)
+      }),
+    [leaves],
+  )
+  const maxMonthly = Math.max(1, ...monthly)
+
+  return (
+    <div className="grid gap-5 md:grid-cols-5">
+      <Card
+        className="md:col-span-3"
+        eyebrow="잔여 연차"
+        action={
+          <Button variant="ghost" size="sm" onClick={onEditTotal}>
+            총 연차 설정
+          </Button>
+        }
+      >
+        <div className="flex items-end justify-between">
+          <p className="text-heading-sm font-bold tabular-nums md:text-heading-lg">{fmtDays(summary.remaining)}</p>
+          <p className="text-body-sm text-mid">총 {fmtDays(summary.total)}</p>
+        </div>
+        <ProgressBar value={summary.usageRate} className="mt-6 h-2.5" />
+        <p className="mt-2 text-right text-micro text-mid">사용률 {summary.usageRate}%</p>
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          <Stat label="사용" value={fmtDays(summary.used)} />
+          <Stat label="예정" value={fmtDays(summary.planned)} />
+          <Stat label="잔여" value={fmtDays(summary.remaining)} />
+        </div>
+      </Card>
+
+      <Card className="md:col-span-2" title="예정된 연차">
+        {upcoming.length === 0 ? (
+          <EmptyState text="예정된 연차가 없어요" />
+        ) : (
+          <ul className="space-y-2">
+            {upcoming.map((l) => (
+              <li key={l.id} className="flex items-center justify-between rounded-[16px] bg-citrus/50 px-4 py-3">
+                <div>
+                  <p className="text-body-sm font-medium">
+                    {fmtShort(l.startDate)} ({weekdayKo(l.startDate)})
+                    {l.endDate !== l.startDate && ` – ${fmtShort(l.endDate)}`}
+                  </p>
+                  <p className="text-caption text-deep">
+                    {l.type}
+                    {l.memo && ` · ${l.memo}`}
+                  </p>
+                </div>
+                <span className="text-body-sm font-medium tabular-nums">−{fmtDays(l.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card className="md:col-span-5" title="월별 사용 현황">
+        <div className="flex items-end gap-2">
+          {monthly.map((v, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+              <span className="text-micro text-mid tabular-nums">{v > 0 ? fmtDays(v).replace('일', '') : ''}</span>
+              <div className="flex h-24 w-full items-end">
+                <div className="w-full rounded-t-[6px] bg-ink" style={{ height: `${(v / maxMonthly) * 100}%` }} />
+              </div>
+              <span className="text-micro text-mid">{i + 1}월</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+/* ---------- 사용 내역 ---------- */
+function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l: Leave) => void; onRemove: (id: string) => void }) {
+  const base = today()
+  const [filter, setFilter] = useState<'all' | Leave['type']>('all')
+  const list = leaves.filter((l) => filter === 'all' || l.type === filter).sort((a, b) => b.startDate.localeCompare(a.startDate))
+
+  const groups = useMemo(() => {
+    const m = new Map<string, Leave[]>()
+    for (const l of list) {
+      const k = l.startDate.slice(0, 7)
+      m.set(k, [...(m.get(k) ?? []), l])
+    }
+    return [...m.entries()]
+  }, [list])
+
+  return (
+    <Card
+      title="사용 내역"
+      action={
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {(['all', '연차', '반차', '반반차', '기타'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={cx(
+                'rounded-pill px-3 py-1 text-caption transition-colors',
+                filter === f ? 'bg-ink text-paper' : 'bg-wash text-deep hover:bg-hairline',
+              )}
+            >
+              {f === 'all' ? '전체' : f}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      {groups.length === 0 ? (
+        <EmptyState text="등록된 연차가 없어요" />
+      ) : (
+        <div className="space-y-8">
+          {groups.map(([ym, items]) => (
+            <div key={ym}>
+              <p className="mb-3 text-caption text-mid">
+                {ym.slice(0, 4)}년 {Number(ym.slice(5, 7))}월 · {fmtDays(items.reduce((s, l) => s + l.amount, 0))}
+              </p>
+              <ul className="divide-y divide-hairline/60 rounded-[20px] bg-canvas px-4">
+                {items.map((l) => (
+                  <li key={l.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3.5">
+                    {/* 기간 연차는 두 날짜를 같은 굵기로 나란히, 요일은 묶어서 */}
+                    <span className="shrink-0 whitespace-nowrap text-body-sm font-medium tabular-nums sm:w-[108px]">
+                      {fmtShort(l.startDate)}
+                      {l.endDate !== l.startDate && ` – ${fmtShort(l.endDate)}`}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap text-caption text-mid sm:w-9">
+                      {l.endDate !== l.startDate
+                        ? `${weekdayKo(l.startDate)}·${weekdayKo(l.endDate)}`
+                        : weekdayKo(l.startDate)}
+                    </span>
+                    <Badge className="bg-citrus">{l.type}</Badge>
+                    {l.startDate > base && <span className="text-micro font-medium text-ember">예정</span>}
+                    {/* 좁은 화면에서는 메모를 아랫줄로 */}
+                    <span className="order-last w-full truncate text-caption text-mid sm:order-none sm:w-auto sm:flex-1 sm:text-body-sm">
+                      {l.memo}
+                    </span>
+                    <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">−{fmtDays(l.amount)}</span>
+                    <div className="flex shrink-0 gap-1 md:opacity-0 md:group-hover:opacity-100">
+                      <Button variant="ghost" size="sm" onClick={() => onEdit(l)}>
+                        수정
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => onRemove(l.id)}>
+                        삭제
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/* ---------- 총 연차 설정 ---------- */
+function TotalLeaveModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { state, dispatch } = useApp()
+  const [value, setValue] = useState(String(state.settings.totalLeave))
+  return (
+    <Modal open={open} onClose={onClose} title="총 연차 설정">
+      <div className="space-y-5">
+        <Field label={`${state.settings.year}년 총 연차`} hint="U+웍스 연동 시 자동으로 채워질 예정입니다.">
+          <Input type="number" step="0.5" min="0" value={value} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            취소
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={() => {
+              dispatch({ type: 'settings/update', payload: { totalLeave: Number(value) || 0 } })
+              onClose()
+            }}
+          >
+            저장
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
