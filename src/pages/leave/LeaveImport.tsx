@@ -6,7 +6,8 @@ import { buildDayOffContext, countWorkingDays, fmtShort, weekdayKo } from '@/uti
 import { fmtDays } from '@/utils/format'
 import { DEFAULT_AMOUNT, looksLikeApprovalDocList, parseLeaves, type ParsedLeave } from '@/utils/parseLeaves'
 
-const PLACEHOLDER = `근태 > 연차 사용내역 화면의 표를 드래그해서 복사한 뒤 그대로 붙여넣으세요.
+const PLACEHOLDER = `U+웍스 › 근태관리 › 내 출근부 › 휴가세부내역
+표를 드래그해서 복사한 뒤 그대로 붙여넣으세요.
 
 예)
 2026-09-18  연차  연차  사용  -1    2026-10-02 ~ 2026-10-02  개인사유
@@ -85,7 +86,8 @@ export default function LeaveImport({ open, onClose }: { open: boolean; onClose:
             className="w-full resize-y rounded-[12px] border border-hairline bg-paper px-4 py-3 text-caption leading-relaxed text-ink outline-none placeholder:text-mid focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
           <p className="mt-1.5 text-micro text-mid">
-            '사용' 행만 연차로 가져옵니다. 날짜는 신청일이 아니라 사용기간을 기준으로 해요.
+            <b className="font-medium text-deep">근태관리 › 내 출근부 › 휴가세부내역</b> 의 표를 복사하세요. '사용' 행만 가져오고, 날짜는 신청일이
+            아니라 사용기간을 기준으로 합니다.
           </p>
         </div>
 
@@ -94,7 +96,7 @@ export default function LeaveImport({ open, onClose }: { open: boolean; onClose:
             <p className="text-caption font-medium text-ember">전자결재 문서 목록으로 보여요</p>
             <p className="mt-1 text-micro leading-relaxed text-deep">
               이 목록의 날짜는 기안일·완료일(결재 날짜)이라 실제 휴가 날짜가 아닙니다. 그대로 가져오면 엉뚱한 날짜로 등록돼요. 근태 메뉴의{' '}
-              <b>연차 사용내역</b> 화면을 붙여넣어 주세요.
+              <b>내 출근부 › 휴가세부내역</b> 화면을 붙여넣어 주세요.
             </p>
           </div>
         )}
