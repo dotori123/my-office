@@ -12,11 +12,15 @@ interface Props {
 
 const emptyLink = (kind: LinkKind = 'test'): ProjectLink => ({ id: uid(), kind, label: '', url: '' })
 
-/** 'example.com' 처럼 스킴이 없으면 https:// 를 붙인다 */
+/**
+ * 'example.com' 처럼 스킴이 없으면 https:// 를 붙인다.
+ * http/https 만 허용 — javascript: 같은 스킴이 링크로 들어가지 않도록.
+ */
 const normalizeUrl = (u: string) => {
   const t = u.trim()
   if (!t) return ''
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(t) ? t : `https://${t}`
+  if (/^https?:\/\//i.test(t)) return t
+  return `https://${t.replace(/^[a-z][a-z0-9+.-]*:\/*/i, '')}`
 }
 
 export default function ProjectForm({ open, onClose, initial }: Props) {
