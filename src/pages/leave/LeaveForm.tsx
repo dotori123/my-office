@@ -21,6 +21,8 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
   const [amount, setAmount] = useState('1')
   const [memo, setMemo] = useState('')
   const [touchedAmount, setTouchedAmount] = useState(false)
+  /** 종료일을 직접 건드렸는지 — 그전까지는 시작일을 그대로 따라간다 */
+  const [touchedEnd, setTouchedEnd] = useState(false)
 
   const ctx = useMemo(() => buildDayOffContext(state.leaves.filter((l) => l.id !== initial?.id), state.events), [state, initial])
 
@@ -33,6 +35,7 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
       setAmount(String(initial.amount))
       setMemo(initial.memo ?? '')
       setTouchedAmount(true)
+      setTouchedEnd(initial.endDate !== initial.startDate)
     } else {
       const s = presetDates?.start ?? today()
       setType('연차')
@@ -41,6 +44,7 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
       setAmount('1')
       setMemo('')
       setTouchedAmount(false)
+      setTouchedEnd(Boolean(presetDates && presetDates.end !== presetDates.start))
     }
   }, [open, initial, presetDates])
 
@@ -78,7 +82,10 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
                 onClick={() => {
                   setType(t)
                   setTouchedAmount(false)
-                  if (t !== '연차' && t !== '기타') setEndDate(startDate)
+                  if (t !== '연차' && t !== '기타') {
+                    setEndDate(startDate)
+                    setTouchedEnd(false)
+                  }
                 }}
                 className={`rounded-pill px-2 py-2 text-caption transition-colors ${
                   type === t ? 'bg-ink text-paper' : 'bg-wash text-deep hover:bg-hairline'
@@ -96,8 +103,10 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
               type="date"
               value={startDate}
               onChange={(e) => {
-                setStartDate(e.target.value)
-                if (!isRange || endDate < e.target.value) setEndDate(e.target.value)
+                const v = e.target.value
+                setStartDate(v)
+                // 종료일을 직접 고르기 전까지는 시작일을 그대로 따라간다
+                if (!isRange || !touchedEnd || endDate < v) setEndDate(v)
                 setTouchedAmount(false)
               }}
             />
@@ -110,6 +119,7 @@ export default function LeaveForm({ open, onClose, initial, presetDates }: Props
                 min={startDate}
                 onChange={(e) => {
                   setEndDate(e.target.value)
+                  setTouchedEnd(true)
                   setTouchedAmount(false)
                 }}
               />
