@@ -31,6 +31,13 @@ export interface Leave {
 export const BENEFIT_CATEGORIES = ['도서', '교육', '소프트웨어', '기타'] as const
 export type BenefitCategory = string
 
+/** 여러 건을 하나로 합쳤을 때 남겨 두는 원본 한 건 */
+export interface BenefitPart {
+  date: string
+  name: string
+  amount: number
+}
+
 export interface Benefit {
   id: string
   userId: string
@@ -40,6 +47,8 @@ export interface Benefit {
   category: BenefitCategory
   memo?: string
   receipt?: string // 증빙자료 파일명 (프론트 단계에서는 이름만 보관)
+  /** 합산 건이면 원본 목록. 내역에서 펼쳐 볼 수 있다 */
+  parts?: BenefitPart[]
 }
 
 export type CalendarEventType = 'holiday' | 'company' | 'leave' | 'personal'

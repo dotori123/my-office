@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BENEFIT_CATEGORIES, type Benefit, type BenefitCategory } from '@/types'
 import { useApp } from '@/store/AppContext'
-import { Badge, Band, Button, Card, EmptyState, Field, Modal, MoneyInput, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Modal, MoneyInput, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today } from '@/utils/date'
 import { fmtWon } from '@/utils/format'
 import { byCategory, monthlyBenefits, summarizeBenefits } from '@/utils/benefit'
@@ -36,6 +36,7 @@ export default function BenefitPage() {
   const [editing, setEditing] = useState<Benefit | null>(null)
   const [settingOpen, setSettingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [removing, setRemoving] = useState<Benefit | null>(null)
 
   const summary = summarizeBenefits(benefits, settings.totalBenefit)
 
@@ -76,7 +77,7 @@ export default function BenefitPage() {
               setEditing(b)
               setFormOpen(true)
             }}
-            onRemove={(id) => dispatch({ type: 'benefit/remove', id })}
+            onRemove={setRemoving}
           />
         )}
         {tab === 'stats' && <StatsTab benefits={benefits} summary={summary} year={settings.year} />}
@@ -85,6 +86,13 @@ export default function BenefitPage() {
       <BenefitImport open={importOpen} onClose={() => setImportOpen(false)} />
       <BenefitForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
       <TotalBenefitModal open={settingOpen} onClose={() => setSettingOpen(false)} />
+      <ConfirmDialog
+        open={removing !== null}
+        title="사용 내역 삭제"
+        message={removing && `'${removing.name}' 내역을 삭제할까요? 삭제한 내역은 되돌릴 수 없어요.`}
+        onConfirm={() => removing && dispatch({ type: 'benefit/remove', id: removing.id })}
+        onClose={() => setRemoving(null)}
+      />
     </>
   )
 }
@@ -150,8 +158,17 @@ function StatusTab({
 }
 
 /* ---------- 사용 내역 ---------- */
-function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdit: (b: Benefit) => void; onRemove: (id: string) => void }) {
+function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdit: (b: Benefit) => void; onRemove: (b: Benefit) => void }) {
   const [filter, setFilter] = useState<'all' | BenefitCategory>('all')
+  // 펼쳐 둔 합산 건
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const list = benefits.filter((b) => filter === 'all' || b.category === filter).sort((a, b) => b.date.localeCompare(a.date))
   // 기본 카테고리 + 실제로 쓰인 카테고리
   const categories = [...new Set([...BENEFIT_CATEGORIES, ...benefits.map((b) => b.category)])]
@@ -193,31 +210,71 @@ function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdi
                 {ym.slice(0, 4)}년 {Number(ym.slice(5, 7))}월 · {fmtWon(items.reduce((s, b) => s + b.amount, 0))}
               </p>
               <ul className="divide-y divide-hairline/60 rounded-[20px] bg-canvas px-4">
-                {items.map((b) => (
-                  <li key={b.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3.5">
-                    <span className="w-12 shrink-0 text-body-sm font-medium tabular-nums">{fmtShort(b.date)}</span>
-                    <Badge className={catStyle(b.category)}>{b.category}</Badge>
-                    {/* 좁은 화면에서는 항목명을 아랫줄로 */}
-                    <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
-                      <p className="truncate text-body-sm">{b.name}</p>
-                      {(b.memo || b.receipt) && (
-                        <p className="truncate text-caption text-mid">
-                          {b.memo}
-                          {b.receipt && ` · 첨부 ${b.receipt}`}
-                        </p>
+                {items.map((b) => {
+                  const parts = b.parts?.length ? b.parts : null
+                  const isOpen = parts !== null && expanded.has(b.id)
+                  return (
+                    <li key={b.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3.5">
+                      <span className="w-12 shrink-0 text-body-sm font-medium tabular-nums">{fmtShort(b.date)}</span>
+                      <Badge className={catStyle(b.category)}>{b.category}</Badge>
+                      {/* 좁은 화면에서는 항목명을 아랫줄로 */}
+                      <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+                        <p className="truncate text-body-sm">{b.name}</p>
+                        {parts ? (
+                          // 합산 건은 메모 자리가 원본 목록을 펼치는 토글이 된다
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(b.id)}
+                            aria-expanded={isOpen}
+                            className="flex max-w-full items-center gap-1 text-caption text-mid transition-colors hover:text-ink"
+                          >
+                            <span className="truncate">{b.memo || `${parts.length}건 합산`}</span>
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className={cx('shrink-0 transition-transform', isOpen && 'rotate-180')}
+                            >
+                              <path d="M3 4.5l3 3 3-3" />
+                            </svg>
+                          </button>
+                        ) : (
+                          (b.memo || b.receipt) && (
+                            <p className="truncate text-caption text-mid">
+                              {b.memo}
+                              {b.receipt && ` · 첨부 ${b.receipt}`}
+                            </p>
+                          )
+                        )}
+                      </div>
+                      <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">{fmtWon(b.amount)}</span>
+                      <div className="flex shrink-0 gap-1 md:opacity-0 md:group-hover:opacity-100">
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(b)}>
+                          수정
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => onRemove(b)}>
+                          삭제
+                        </Button>
+                      </div>
+                      {isOpen && (
+                        <ul className="order-last mb-1 mt-1 w-full space-y-1.5 border-l border-hairline pl-4 sm:ml-[60px]">
+                          {parts.map((p, i) => (
+                            <li key={i} className="flex items-center gap-3 text-caption text-mid">
+                              <span className="w-10 shrink-0 tabular-nums">{fmtShort(p.date)}</span>
+                              <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                              <span className="shrink-0 tabular-nums">{fmtWon(p.amount)}</span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
-                    </div>
-                    <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">{fmtWon(b.amount)}</span>
-                    <div className="flex shrink-0 gap-1 md:opacity-0 md:group-hover:opacity-100">
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(b)}>
-                        수정
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => onRemove(b.id)}>
-                        삭제
-                      </Button>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           ))}

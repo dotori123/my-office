@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Project } from '@/types'
 import { useApp } from '@/store/AppContext'
-import { Band, Button, Card, EmptyState, Input, PageHero } from '@/components/ui'
+import { Band, Button, Card, ConfirmDialog, EmptyState, Input, PageHero } from '@/components/ui'
 import ProjectCard from './ProjectCard'
 import ProjectForm from './ProjectForm'
 
@@ -11,6 +11,7 @@ export default function ProjectPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Project | null>(null)
   const [q, setQ] = useState('')
+  const [removing, setRemoving] = useState<Project | null>(null)
 
   // 고정 → 이름순
   const list = useMemo(() => {
@@ -63,7 +64,7 @@ export default function ProjectPage() {
                     <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
                       수정
                     </Button>
-                    <Button variant="danger" size="sm" onClick={() => dispatch({ type: 'project/remove', id: p.id })}>
+                    <Button variant="danger" size="sm" onClick={() => setRemoving(p)}>
                       삭제
                     </Button>
                   </div>
@@ -75,6 +76,13 @@ export default function ProjectPage() {
       </Band>
 
       <ProjectForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+      <ConfirmDialog
+        open={removing !== null}
+        title="프로젝트 삭제"
+        message={removing && `'${removing.name}' 프로젝트와 등록된 링크를 모두 삭제할까요? 삭제한 프로젝트는 되돌릴 수 없어요.`}
+        onConfirm={() => removing && dispatch({ type: 'project/remove', id: removing.id })}
+        onClose={() => setRemoving(null)}
+      />
     </>
   )
 }

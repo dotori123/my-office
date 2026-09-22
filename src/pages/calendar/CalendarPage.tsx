@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { CalendarEvent } from '@/types'
 import { useApp } from '@/store/AppContext'
-import { ArrowLink, Band, Button, Card, EmptyState, Field, Input, Modal, PageHero, cx } from '@/components/ui'
+import { ArrowLink, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, cx } from '@/components/ui'
 import { HOLIDAYS_2026 } from '@/data/holidays'
 import { addDays, fmtKo, fromKey, isWeekend, monthGrid, today, weekdayKo } from '@/utils/date'
 import { recommendLeaves, summarizeLeaves } from '@/utils/leave'
@@ -20,6 +20,7 @@ export default function CalendarPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<CalendarEvent | null>(null)
   const [showRecommend, setShowRecommend] = useState(true)
+  const [removing, setRemoving] = useState<CalendarEvent | null>(null)
 
   const move = (delta: number) => {
     const d = new Date(year, month + delta, 1)
@@ -185,7 +186,7 @@ export default function CalendarPage() {
                           <Button variant="ghost" size="sm" onClick={() => { setEditing(raw); setFormOpen(true) }}>
                             수정
                           </Button>
-                          <Button variant="danger" size="sm" onClick={() => dispatch({ type: 'event/remove', id: raw.id })}>
+                          <Button variant="danger" size="sm" onClick={() => setRemoving(raw)}>
                             삭제
                           </Button>
                         </div>
@@ -203,6 +204,13 @@ export default function CalendarPage() {
       </Band>
 
       <EventForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} defaultDate={selected} />
+      <ConfirmDialog
+        open={removing !== null}
+        title="일정 삭제"
+        message={removing && `'${removing.title}' 일정을 삭제할까요? 삭제한 일정은 되돌릴 수 없어요.`}
+        onConfirm={() => removing && dispatch({ type: 'event/remove', id: removing.id })}
+        onClose={() => setRemoving(null)}
+      />
     </>
   )
 }

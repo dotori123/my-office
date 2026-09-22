@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Benefit } from '@/types'
+import type { Benefit, BenefitPart } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Badge, Button, Modal, cx } from '@/components/ui'
 import { fmtShort, weekdayKo } from '@/utils/date'
@@ -34,8 +34,9 @@ const monthsIn = (name: string) => {
  * 항목명이 같은 건을 하나로 합친다.
  * 금액은 더하고, 이름에 '개월' 이 있으면 개월 수도 더해서 이름을 바꾼다.
  * (예: 1개월 구독 5건 → 5개월 구독)
+ * 원본 건들은 parts 에 남겨서 내역에서 펼쳐 볼 수 있게 한다.
  */
-function mergeSameName<T extends ParsedBenefit>(rows: T[], approvalDate?: string): T[] {
+function mergeSameName<T extends ParsedBenefit>(rows: T[], approvalDate?: string): (T & { parts?: BenefitPart[] })[] {
   const groups = new Map<string, T[]>()
   for (const r of rows) {
     const key = r.name.trim()
@@ -60,6 +61,7 @@ function mergeSameName<T extends ParsedBenefit>(rows: T[], approvalDate?: string
       // 결재일이 있으면 그 날짜로, 없으면 마지막 지출일로
       date: approvalDate ?? last.date,
       memo: `${fmtShort(sorted[0].date)} – ${fmtShort(last.date)} · ${group.length}건 합산`,
+      parts: sorted.map(({ date, name, amount }) => ({ date, name, amount })),
     }
   })
 }
@@ -84,7 +86,7 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
   const parsed = useMemo(() => {
     const { rows, skipped, approvalDate } = parseBenefits(text, settings.year)
     const mergedAll = mergeSameName(rows, approvalDate)
-    const items = merge ? mergedAll : rows
+    const items: (ParsedBenefit & { parts?: BenefitPart[] })[] = merge ? mergedAll : rows
     return {
       items: items.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })),
       skipped,
@@ -112,6 +114,7 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
       amount: r.amount,
       category: r.category,
       memo: r.memo,
+      parts: r.parts,
     }))
     if (payload.length) dispatch({ type: 'benefit/import', payload })
     onClose()

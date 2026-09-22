@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Leave } from '@/types'
 import { useApp } from '@/store/AppContext'
-import { Badge, Band, Button, Card, EmptyState, Field, Input, Modal, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today, weekdayKo } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
 import { summarizeLeaves } from '@/utils/leave'
@@ -29,6 +29,7 @@ export default function LeavePage() {
   const [preset, setPreset] = useState<{ start: string; end: string } | undefined>()
   const [settingOpen, setSettingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [removing, setRemoving] = useState<Leave | null>(null)
 
   const summary = summarizeLeaves(leaves, settings.totalLeave)
 
@@ -67,7 +68,7 @@ export default function LeavePage() {
       <Band tone="gray">
         {tab === 'status' && <StatusTab summary={summary} leaves={leaves} onEditTotal={() => setSettingOpen(true)} />}
         {tab === 'history' && (
-          <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={(id) => dispatch({ type: 'leave/remove', id })} />
+          <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={setRemoving} />
         )}
         {tab === 'recommend' && <LeaveRecommend remaining={summary.remaining} onApply={(s, e) => openNew({ start: s, end: e })} />}
       </Band>
@@ -75,6 +76,13 @@ export default function LeavePage() {
       <LeaveImport open={importOpen} onClose={() => setImportOpen(false)} />
       <LeaveForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} presetDates={preset} />
       <TotalLeaveModal open={settingOpen} onClose={() => setSettingOpen(false)} />
+      <ConfirmDialog
+        open={removing !== null}
+        title="연차 내역 삭제"
+        message={removing && `${fmtShort(removing.startDate)} ${removing.type} 내역을 삭제할까요? 삭제한 내역은 되돌릴 수 없어요.`}
+        onConfirm={() => removing && dispatch({ type: 'leave/remove', id: removing.id })}
+        onClose={() => setRemoving(null)}
+      />
     </>
   )
 }
@@ -168,7 +176,7 @@ function StatusTab({
 }
 
 /* ---------- 사용 내역 ---------- */
-function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l: Leave) => void; onRemove: (id: string) => void }) {
+function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l: Leave) => void; onRemove: (l: Leave) => void }) {
   const base = today()
   const [filter, setFilter] = useState<'all' | Leave['type']>('all')
   const list = leaves.filter((l) => filter === 'all' || l.type === filter).sort((a, b) => b.startDate.localeCompare(a.startDate))
@@ -236,7 +244,7 @@ function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l:
                       <Button variant="ghost" size="sm" onClick={() => onEdit(l)}>
                         수정
                       </Button>
-                      <Button variant="danger" size="sm" onClick={() => onRemove(l.id)}>
+                      <Button variant="danger" size="sm" onClick={() => onRemove(l)}>
                         삭제
                       </Button>
                     </div>

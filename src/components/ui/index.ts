@@ -18,6 +18,7 @@ export { Tabs } from './Tabs'
 export { Field } from './Field'
 export { Input, Select, MoneyInput } from './Input'
 export { Modal } from './Modal'
+export { ConfirmDialog } from './ConfirmDialog'
 
 // 표시
 export { Badge } from './Badge'
