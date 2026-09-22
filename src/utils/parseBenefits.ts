@@ -119,9 +119,13 @@ function stripForm(lines: string[]) {
  *   영수증첨부
  *
  * 날짜만 있는 줄이 두 개 이상이면 이 형식으로 보고, 다음 날짜 전까지를 한 건으로 묶는다.
+ * 한 건만 붙여넣어 날짜 줄이 하나뿐이면, 나머지 줄에 날짜가 없을 때만 이 형식으로 본다
+ * (표 위에 날짜 제목 하나가 있는 경우와 구분하기 위해).
  */
 function joinVerticalBlocks(lines: string[]) {
-  if (lines.filter((l) => DATE_ONLY.test(l)).length < 2) return lines
+  const dateOnlyCount = lines.filter((l) => DATE_ONLY.test(l)).length
+  if (dateOnlyCount === 0) return lines
+  if (dateOnlyCount === 1 && lines.some((l) => !DATE_ONLY.test(l) && FULL_DATE.test(l))) return lines
 
   const out: string[] = []
   let current: string[] | null = null
