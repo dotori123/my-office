@@ -45,7 +45,8 @@ const TYPE_PATTERNS: { re: RegExp; type: LeaveType }[] = [
   { re: /반반차|1\/4\s*연차/, type: '반반차' },
   { re: /반차|반일|오전\s*휴가|오후\s*휴가/, type: '반차' },
   { re: /연차|월차|종일\s*휴가|휴가/, type: '연차' },
-  { re: /경조|공가|병가|대체\s*휴무|보상\s*휴가|기타/, type: '기타' },
+  { re: /경조/, type: '경조' },
+  { re: /공가|병가|대체\s*휴무|보상\s*휴가|기타/, type: '기타' },
 ]
 
 /** 유형이 명시되지 않았을 때 쓰는 기본 차감 일수 */
@@ -53,6 +54,7 @@ export const DEFAULT_AMOUNT: Record<LeaveType, number> = {
   연차: 1,
   반차: 0.5,
   반반차: 0.25,
+  경조: 0,
   기타: 1,
 }
 
@@ -93,7 +95,8 @@ const EXACT_TYPE: Record<string, LeaveType> = {
   반반차: '반반차',
   공가: '기타',
   병가: '기타',
-  경조: '기타',
+  경조: '경조',
+  경조휴가: '경조',
 }
 
 interface StructuredRow {

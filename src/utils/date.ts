@@ -107,6 +107,19 @@ export const countWorkingDays = (start: string, end: string, ctx: DayOffContext)
   return n
 }
 
+/** start 부터 n일째 되는 날. working 이면 주말·공휴일·회사휴무를 건너뛰며 센다 */
+export const nthDayFrom = (start: string, n: number, countBy: 'working' | 'calendar', ctx: DayOffContext) => {
+  if (n <= 1) return start
+  if (countBy === 'calendar') return addDays(start, n - 1)
+  let cur = start
+  let counted = isWorkingDay(cur, ctx) ? 1 : 0
+  while (counted < n) {
+    cur = addDays(cur, 1)
+    if (isWorkingDay(cur, ctx)) counted += 1
+  }
+  return cur
+}
+
 /** 해당 월의 달력 셀 (월요일 시작, 6주 고정) */
 export const monthGrid = (year: number, month: number) => {
   const first = new Date(year, month, 1)

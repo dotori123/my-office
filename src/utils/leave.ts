@@ -1,5 +1,6 @@
 import type { CalendarEvent, Leave } from '@/types'
 import { HOLIDAY_MAP } from '@/data/holidays'
+import { FAMILY_EVENT_MAP } from '@/data/familyEvents'
 import { addDays, buildDayOffContext, diffDays, isDayOff, isWorkingDay, today, type DayOffContext } from './date'
 
 export interface LeaveSummary {
@@ -8,6 +9,8 @@ export interface LeaveSummary {
   planned: number
   remaining: number
   usageRate: number
+  /** 경조휴가로 쉰(쉴) 날 수. 연차와 별개라 잔여에는 영향 없다 */
+  familyDays: number
 }
 
 /** 오늘 기준으로 사용/예정/잔여 연차 계산 */
@@ -15,8 +18,13 @@ export const summarizeLeaves = (leaves: Leave[], total: number, base = today()):
   const used = leaves.filter((l) => l.startDate <= base).reduce((s, l) => s + l.amount, 0)
   const planned = leaves.filter((l) => l.startDate > base).reduce((s, l) => s + l.amount, 0)
   const remaining = total - used - planned
-  return { total, used, planned, remaining, usageRate: total === 0 ? 0 : Math.round((used / total) * 100) }
+  const familyDays = leaves.filter((l) => l.type === '경조').reduce((s, l) => s + diffDays(l.startDate, l.endDate) + 1, 0)
+  return { total, used, planned, remaining, usageRate: total === 0 ? 0 : Math.round((used / total) * 100), familyDays }
 }
+
+/** 목록·달력에 보여줄 이름. 경조휴가는 사유를, 나머지는 유형을 */
+export const leaveLabel = (l: Pick<Leave, 'type' | 'eventKey'>) =>
+  l.type === '경조' ? (l.eventKey && FAMILY_EVENT_MAP.get(l.eventKey)?.label) || '경조휴가' : l.type
 
 export interface Recommendation {
   /** 사용할 연차 날짜들 */

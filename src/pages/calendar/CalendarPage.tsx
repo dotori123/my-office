@@ -6,7 +6,7 @@ import { useSeo } from '@/hooks/useSeo'
 import { ArrowLink, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, cx } from '@/components/ui'
 import { HOLIDAYS_2026 } from '@/data/holidays'
 import { addDays, fmtKo, fromKey, isWeekend, monthGrid, today, weekdayKo } from '@/utils/date'
-import { recommendLeaves, summarizeLeaves } from '@/utils/leave'
+import { leaveLabel, recommendLeaves, summarizeLeaves } from '@/utils/leave'
 import { EVENT_STYLE, type UnifiedEvent } from './eventStyle'
 
 const WEEK_HEADER = ['월', '화', '수', '목', '금', '토', '일']
@@ -46,7 +46,7 @@ export default function CalendarPage() {
     HOLIDAYS_2026.forEach((h) => push({ id: `h-${h.date}`, date: h.date, title: h.name, type: 'holiday' }))
     leaves.forEach((l) => {
       for (let cur = l.startDate; cur <= l.endDate; cur = addDays(cur, 1)) {
-        push({ id: l.id, date: cur, title: l.type, type: 'leave', memo: l.memo })
+        push({ id: l.id, date: cur, title: leaveLabel(l), type: 'leave', memo: l.memo })
       }
     })
     events.forEach((e) => push({ id: e.id, date: e.date, title: e.title, type: e.type, memo: e.memo }))

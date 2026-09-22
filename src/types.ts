@@ -7,13 +7,15 @@ export interface User {
   joinDate: string // YYYY-MM-DD
 }
 
-export const LEAVE_TYPES = ['연차', '반차', '반반차', '기타'] as const
+export const LEAVE_TYPES = ['연차', '반차', '반반차', '경조', '기타'] as const
 export type LeaveType = (typeof LEAVE_TYPES)[number]
 
+/** 하루당 차감 일수. 경조휴가는 연차와 별개의 유급휴가라 차감하지 않는다 */
 export const LEAVE_UNIT: Record<LeaveType, number> = {
   연차: 1,
   반차: 0.5,
   반반차: 0.25,
+  경조: 0,
   기타: 1,
 }
 
@@ -25,6 +27,8 @@ export interface Leave {
   endDate: string
   amount: number // 차감 일수
   memo?: string
+  /** 경조휴가 사유 — src/data/familyEvents 의 key */
+  eventKey?: string
 }
 
 /** 기본 제공 카테고리. 사용자가 직접 입력한 값도 쓸 수 있어 타입은 열어둔다 */

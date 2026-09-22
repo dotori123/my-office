@@ -6,7 +6,7 @@ import { useSeo } from '@/hooks/useSeo'
 import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today, weekdayKo } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
-import { summarizeLeaves } from '@/utils/leave'
+import { leaveLabel, summarizeLeaves } from '@/utils/leave'
 import LeaveForm from './LeaveForm'
 import LeaveRecommend from './LeaveRecommend'
 import LeaveImport from './LeaveImport'
@@ -121,6 +121,9 @@ function StatusTab({ summary, leaves }: { summary: ReturnType<typeof summarizeLe
           <Stat label="예정" value={fmtDays(summary.planned)} />
           <Stat label="잔여" value={fmtDays(summary.remaining)} />
         </div>
+        {summary.familyDays > 0 && (
+          <p className="mt-4 text-caption text-mid">경조휴가 {summary.familyDays}일은 연차와 별개라 여기에 포함하지 않았어요.</p>
+        )}
       </Card>
 
       <Card className="md:col-span-2" title="예정된 연차">
@@ -136,11 +139,13 @@ function StatusTab({ summary, leaves }: { summary: ReturnType<typeof summarizeLe
                     {l.endDate !== l.startDate && ` – ${fmtShort(l.endDate)}`}
                   </p>
                   <p className="text-caption text-deep">
-                    {l.type}
+                    {leaveLabel(l)}
                     {l.memo && ` · ${l.memo}`}
                   </p>
                 </div>
-                <span className="text-body-sm font-medium tabular-nums">−{fmtDays(l.amount)}</span>
+                <span className="text-body-sm font-medium tabular-nums">
+                  {l.type === '경조' ? <span className="text-caption font-normal text-mid">차감 없음</span> : `−${fmtDays(l.amount)}`}
+                </span>
               </li>
             ))}
           </ul>
@@ -184,7 +189,7 @@ function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l:
       title="사용 내역"
       action={
         <div className="flex flex-wrap justify-end gap-1.5">
-          {(['all', '연차', '반차', '반반차', '기타'] as const).map((f) => (
+          {(['all', '연차', '반차', '반반차', '경조', '기타'] as const).map((f) => (
             <button
               key={f}
               type="button"
@@ -222,13 +227,15 @@ function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l:
                         ? `${weekdayKo(l.startDate)}·${weekdayKo(l.endDate)}`
                         : weekdayKo(l.startDate)}
                     </span>
-                    <Badge className="bg-citrus">{l.type}</Badge>
+                    <Badge className={l.type === '경조' ? 'bg-sky' : 'bg-citrus'}>{leaveLabel(l)}</Badge>
                     {l.startDate > base && <span className="text-micro font-medium text-ember">예정</span>}
                     {/* 좁은 화면에서는 메모를 아랫줄로 */}
                     <span className="order-last w-full truncate text-caption text-mid sm:order-none sm:w-auto sm:flex-1 sm:text-body-sm">
                       {l.memo}
                     </span>
-                    <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">−{fmtDays(l.amount)}</span>
+                    <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">
+                      {l.type === '경조' ? <span className="text-caption font-normal text-mid">차감 없음</span> : `−${fmtDays(l.amount)}`}
+                    </span>
                     <div className="flex shrink-0 gap-1 md:opacity-0 md:group-hover:opacity-100">
                       <Button variant="ghost" size="sm" onClick={() => onEdit(l)}>
                         수정

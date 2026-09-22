@@ -6,7 +6,7 @@ import { ArrowLink, Band, Card, ProgressBar, cx } from '@/components/ui'
 import { HOLIDAYS_2026 } from '@/data/holidays'
 import { addDays, buildDayOffContext, countWorkingDays, diffDays, fmtFull, fmtShort, isDayOff, tenureText, today, weekdayKo } from '@/utils/date'
 import { fmtDays, fmtWon } from '@/utils/format'
-import { summarizeLeaves } from '@/utils/leave'
+import { leaveLabel, summarizeLeaves } from '@/utils/leave'
 import { summarizeBenefits } from '@/utils/benefit'
 import { EVENT_STYLE, type UnifiedEvent } from '@/pages/calendar/eventStyle'
 import ProjectCard from '@/pages/project/ProjectCard'
@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const upcoming = useMemo<UnifiedEvent[]>(() => {
     const list: UnifiedEvent[] = [
       ...HOLIDAYS_2026.map((h) => ({ id: h.date, date: h.date, title: h.name, type: 'holiday' as const })),
-      ...leaves.map((l) => ({ id: l.id, date: l.startDate, title: l.type, type: 'leave' as const })),
+      ...leaves.map((l) => ({ id: l.id, date: l.startDate, title: leaveLabel(l), type: 'leave' as const })),
       ...events.map((e) => ({ id: e.id, date: e.date, title: e.title, type: e.type })),
     ]
     return list.filter((e) => e.date >= base).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5)
@@ -62,7 +62,8 @@ export default function DashboardPage() {
         while (isDayOff(addDays(end, 1), ctx)) end = addDays(end, 1)
         let start = d
         while (isDayOff(addDays(start, -1), ctx)) start = addDays(start, -1)
-        const label = ctx.leaveMap.get(d)?.type ?? upcoming.find((u) => u.date === d)?.title ?? '휴무'
+        const onLeave = ctx.leaveMap.get(d)
+        const label = (onLeave && leaveLabel(onLeave)) ?? upcoming.find((u) => u.date === d)?.title ?? '휴무'
         return { date: d, start, end, label, dday: diffDays(base, start) }
       }
     }
