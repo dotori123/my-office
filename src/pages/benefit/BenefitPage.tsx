@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { BENEFIT_CATEGORIES, type Benefit, type BenefitCategory } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
-import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Modal, MoneyInput, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today } from '@/utils/date'
 import { fmtWon } from '@/utils/format'
 import { byCategory, monthlyBenefits, summarizeBenefits } from '@/utils/benefit'
@@ -40,7 +40,6 @@ export default function BenefitPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Benefit | null>(null)
-  const [settingOpen, setSettingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [removing, setRemoving] = useState<Benefit | null>(null)
 
@@ -75,7 +74,7 @@ export default function BenefitPage() {
       </Band>
 
       <Band tone="gray">
-        {tab === 'status' && <StatusTab summary={summary} benefits={benefits} onEditTotal={() => setSettingOpen(true)} />}
+        {tab === 'status' && <StatusTab summary={summary} benefits={benefits} />}
         {tab === 'history' && (
           <HistoryTab
             benefits={benefits}
@@ -91,7 +90,6 @@ export default function BenefitPage() {
 
       <BenefitImport open={importOpen} onClose={() => setImportOpen(false)} />
       <BenefitForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
-      <TotalBenefitModal open={settingOpen} onClose={() => setSettingOpen(false)} />
       <ConfirmDialog
         open={removing !== null}
         title="사용 내역 삭제"
@@ -104,28 +102,13 @@ export default function BenefitPage() {
 }
 
 /* ---------- 현황 ---------- */
-function StatusTab({
-  summary,
-  benefits,
-  onEditTotal,
-}: {
-  summary: ReturnType<typeof summarizeBenefits>
-  benefits: Benefit[]
-  onEditTotal: () => void
-}) {
+function StatusTab({ summary, benefits }: { summary: ReturnType<typeof summarizeBenefits>; benefits: Benefit[] }) {
   const recent = [...benefits].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4)
   const over = summary.remaining < 0
   return (
     <div className="grid gap-5 md:grid-cols-5">
-      <Card
-        className="md:col-span-3"
-        eyebrow="잔액"
-        action={
-          <Button variant="ghost" size="sm" onClick={onEditTotal}>
-            지원금 설정
-          </Button>
-        }
-      >
+      {/* 총 지원금은 프로필 설정에서 바꾼다 */}
+      <Card className="md:col-span-3" eyebrow="잔액">
         <div className="flex items-end justify-between">
           <p className={cx('text-heading-sm font-bold tabular-nums md:text-heading', over && 'text-ember')}>{fmtWon(summary.remaining)}</p>
           <p className="text-body-sm text-mid">총 {fmtWon(summary.total)}</p>
@@ -345,37 +328,5 @@ function StatsTab({ benefits, summary, year }: { benefits: Benefit[]; summary: R
         )}
       </Card>
     </div>
-  )
-}
-
-/* ---------- 지원금 설정 ---------- */
-function TotalBenefitModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { state, dispatch } = useApp()
-  const [value, setValue] = useState(String(state.settings.totalBenefit))
-  return (
-    <Modal open={open} onClose={onClose} title="지원금 설정">
-      <div className="space-y-5">
-        <Field label={`${state.settings.year}년 총 지원금`} hint="도서지원비 + 교육비 통합 금액">
-          <div className="relative">
-            <MoneyInput value={value} onValueChange={setValue} className="pr-10" />
-            <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-caption text-mid">원</span>
-          </div>
-        </Field>
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
-            취소
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={() => {
-              dispatch({ type: 'settings/update', payload: { totalBenefit: Number(value) || 0 } })
-              onClose()
-            }}
-          >
-            저장
-          </Button>
-        </div>
-      </div>
-    </Modal>
   )
 }
