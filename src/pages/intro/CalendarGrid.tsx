@@ -9,7 +9,7 @@ import { lerp, ramp } from './useStageProgress'
  *   0.00 ~ 0.35  기울어진 격자가 떠 있고 연휴 타일만 솟아 있다
  *   0.35 ~ 0.70  격자가 정면으로 서면서 평일 타일은 뒤로 물러나 흐려지고
  *                연휴 타일 3개가 가운데로 모여 커진다
- *   0.70 ~ 1.00  모인 덩어리가 천천히 멀어지며 다음 섹션에 자리를 내준다
+ *   0.70 ~ 1.00  모인 덩어리를 유지한 채 스테이지가 스크롤을 타고 올라간다
  *
  * MD 규칙대로 조명·그림자 없이 평면 재질만 쓴다.
  * three 는 이 라우트에서만 불러오므로 대시보드 번들에는 들어가지 않는다.
@@ -147,7 +147,6 @@ export default function CalendarGrid({
       const p = progressRef?.current ?? 0
 
       const gather = ramp(p, 0.3, 0.7) // 연휴 타일이 모이는 정도
-      const exit = ramp(p, 0.72, 1) // 마지막에 멀어지는 정도
 
       for (const { mesh, material, home, target, delay, holiday } of tiles) {
         const wave = Math.sin(t * 0.9 - delay)
@@ -157,18 +156,19 @@ export default function CalendarGrid({
         mesh.position.z = holiday ? 0.9 + wave * 0.28 + gather * 1.2 : wave * 0.12 - gather * 2.4
 
         if (holiday) {
-          mesh.scale.setScalar(lerp(1.04 + wave * 0.02, 1.5, gather) * (1 - exit * 0.25))
-          material.opacity = 1 - exit
+          mesh.scale.setScalar(lerp(1.04 + wave * 0.02, 1.5, gather))
+          material.opacity = 1
         } else {
           // 평일 타일은 뒤로 물러나며 흐려진다
-          material.opacity = lerp(1, 0.08, gather) * (1 - exit)
+          material.opacity = lerp(1, 0.08, gather)
         }
       }
 
       // 기울어진 격자 → 정면 → 살짝 멀어짐
+      board.position.y = lerp(1.9, 0.5, gather)
       board.rotation.x = lerp(-0.62, -0.06, gather) + pointerY * 0.05 * (1 - gather)
       board.rotation.z = lerp(0.06, 0, gather) + pointerX * 0.05 * (1 - gather)
-      camera.position.z = lerp(baseZ, baseZ - 1.6, gather) + exit * 9
+      camera.position.z = lerp(baseZ, baseZ - 1.6, gather)
       camera.lookAt(0, lerp(0.4, 0, gather), 0)
 
       renderer.render(scene, camera)

@@ -4,6 +4,7 @@ import { Band, Card } from '@/components/ui'
 import CalendarGrid from './CalendarGrid'
 import CountUp from './CountUp'
 import Reveal from './Reveal'
+import { BenefitMock, CalendarMock, DashboardMock, LeaveMock, ProjectMock } from './Mocks'
 import { ramp, useStageProgress } from './useStageProgress'
 
 /**
@@ -19,21 +20,25 @@ const FEATURES = [
     label: 'Leave',
     title: '연차',
     body: '총 연차·사용·예정·잔여를 한 화면에서. 반차·반반차까지 0.25일 단위로 계산하고, 기간 연차는 주말과 공휴일을 빼고 차감합니다.',
+    mock: <LeaveMock />,
   },
   {
     label: 'Benefit',
     title: '지원비',
     body: '도서·교육·소프트웨어를 통합 지원비로 관리해요. 월별 사용액과 카테고리별 비중을 보여주고, 잔액을 자동으로 계산합니다.',
+    mock: <BenefitMock />,
   },
   {
     label: 'Calendar',
     title: '캘린더',
     body: '공휴일·연차·회사 일정·개인 일정을 한 달력에. 회사 휴무일을 등록하면 연차 계산과 추천에 함께 반영됩니다.',
+    mock: <CalendarMock />,
   },
   {
     label: 'Projects',
     title: '프로젝트 바로가기',
     body: '테스트·운영 서버, WBS, 저장소, 디자인 링크를 프로젝트별로 모아둡니다. 자주 쓰는 프로젝트는 대시보드에 고정할 수 있어요.',
+    mock: <ProjectMock />,
   },
 ]
 
@@ -55,14 +60,13 @@ export default function IntroPage() {
       const p = progress.current
       const out = ramp(p, 0.06, 0.3)
       const inn = ramp(p, 0.42, 0.66)
-      const gone = ramp(p, 0.82, 1)
 
       if (introCopyRef.current) {
         introCopyRef.current.style.opacity = String(1 - out)
         introCopyRef.current.style.transform = `translateY(${-out * 40}px)`
       }
       if (recommendCopyRef.current) {
-        recommendCopyRef.current.style.opacity = String(inn * (1 - gone))
+        recommendCopyRef.current.style.opacity = String(inn)
         recommendCopyRef.current.style.transform = `translateY(${(1 - inn) * 40}px)`
       }
       if (hintRef.current) hintRef.current.style.opacity = String(1 - ramp(p, 0, 0.08))
@@ -74,7 +78,7 @@ export default function IntroPage() {
   return (
     <div className="min-h-dvh bg-paper text-ink">
       {/* 스크롤 스테이지 — 3D 격자가 붙어 있는 동안 문구가 바뀐다 */}
-      <section ref={stageRef} className="relative h-[340vh]">
+      <section ref={stageRef} className="relative h-[250vh]">
         <div className="sticky top-0 h-dvh overflow-hidden">
           <CalendarGrid className="absolute inset-0 h-full w-full" progressRef={progress} />
           {/* 문구가 올라앉을 자리 — 격자가 흰 배경으로 스며들게 한다 */}
@@ -88,7 +92,7 @@ export default function IntroPage() {
           {/* 1장 — 첫인사 */}
           <div
             ref={introCopyRef}
-            className="absolute inset-x-0 bottom-[12vh] flex flex-col items-center px-5 text-center md:bottom-[14vh]"
+            className="absolute inset-x-0 bottom-[9vh] flex flex-col items-center px-5 text-center md:bottom-[11vh]"
           >
             <p className="text-body-sm text-mid">MY OFFICE</p>
             <h1 className="mt-3 text-[40px] font-bold leading-[1.05] tracking-[-1.2px] md:text-heading-lg">
@@ -104,7 +108,7 @@ export default function IntroPage() {
           {/* 2장 — 연차 추천 */}
           <div
             ref={recommendCopyRef}
-            className="absolute inset-x-0 bottom-[12vh] flex flex-col items-center px-5 text-center opacity-0 md:bottom-[14vh]"
+            className="absolute inset-x-0 bottom-[9vh] flex flex-col items-center px-5 text-center opacity-0 md:bottom-[11vh]"
           >
             <p className="text-caption text-mid">연차 추천</p>
             <h2 className="mt-3 text-[34px] font-bold leading-[1.1] tracking-[-1px] md:text-heading">
@@ -175,14 +179,34 @@ export default function IntroPage() {
             <Reveal key={f.title} delay={(i % 2) * 0.1}>
               <Card tone="gray" eyebrow={f.label} title={f.title} className="h-full">
                 <p className="text-body-sm text-mid">{f.body}</p>
+                <div className="mt-5">{f.mock}</div>
               </Card>
             </Reveal>
           ))}
         </div>
       </Band>
 
-      {/* 가져오기 */}
+      {/* 대시보드 미리보기 */}
       <Band tone="gray">
+        <Reveal>
+          <div className="mx-auto max-w-[560px] text-center">
+            <h2 className="text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">
+              열자마자 보이는 화면.
+            </h2>
+            <p className="mt-4 text-body-sm text-mid">
+              다음 휴가까지 며칠 남았는지가 가장 먼저 보이고, 그 아래에 연차와 지원비 잔액이 이어집니다.
+            </p>
+          </div>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="mx-auto mt-10 max-w-[720px]">
+            <DashboardMock />
+          </div>
+        </Reveal>
+      </Band>
+
+      {/* 가져오기 */}
+      <Band>
         <div className="grid items-center gap-10 md:grid-cols-2">
           <Reveal>
             <p className="text-caption text-mid">붙여넣기로 가져오기</p>
@@ -224,7 +248,7 @@ export default function IntroPage() {
       </Band>
 
       {/* 데이터 */}
-      <Band>
+      <Band tone="gray">
         <Reveal>
           <div className="mx-auto max-w-[620px] text-center">
             <h2 className="text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">내 데이터는 내 브라우저에만.</h2>
@@ -237,7 +261,7 @@ export default function IntroPage() {
       </Band>
 
       {/* 마무리 */}
-      <Band tone="gray" inner="py-24 md:py-32">
+      <Band inner="py-24 md:py-32">
         <Reveal>
           <div className="flex flex-col items-center text-center">
             <h2 className="text-heading-sm font-bold tracking-[-0.4px] md:text-heading">오늘 뭘 알아야 하는지, 열자마자.</h2>
