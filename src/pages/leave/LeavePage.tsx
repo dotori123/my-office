@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import type { Leave } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
-import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today, weekdayKo } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
 import { summarizeLeaves } from '@/utils/leave'
@@ -33,7 +33,6 @@ export default function LeavePage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Leave | null>(null)
   const [preset, setPreset] = useState<{ start: string; end: string } | undefined>()
-  const [settingOpen, setSettingOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [removing, setRemoving] = useState<Leave | null>(null)
 
@@ -72,7 +71,7 @@ export default function LeavePage() {
       </Band>
 
       <Band tone="gray">
-        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} onEditTotal={() => setSettingOpen(true)} />}
+        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} />}
         {tab === 'history' && (
           <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={setRemoving} />
         )}
@@ -81,7 +80,6 @@ export default function LeavePage() {
 
       <LeaveImport open={importOpen} onClose={() => setImportOpen(false)} />
       <LeaveForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} presetDates={preset} />
-      <TotalLeaveModal open={settingOpen} onClose={() => setSettingOpen(false)} />
       <ConfirmDialog
         open={removing !== null}
         title="연차 내역 삭제"
@@ -94,15 +92,7 @@ export default function LeavePage() {
 }
 
 /* ---------- 연차 현황 ---------- */
-function StatusTab({
-  summary,
-  leaves,
-  onEditTotal,
-}: {
-  summary: ReturnType<typeof summarizeLeaves>
-  leaves: Leave[]
-  onEditTotal: () => void
-}) {
+function StatusTab({ summary, leaves }: { summary: ReturnType<typeof summarizeLeaves>; leaves: Leave[] }) {
   const base = today()
   const upcoming = leaves.filter((l) => l.startDate > base).sort((a, b) => a.startDate.localeCompare(b.startDate))
 
@@ -118,15 +108,8 @@ function StatusTab({
 
   return (
     <div className="grid gap-5 md:grid-cols-5">
-      <Card
-        className="md:col-span-3"
-        eyebrow="잔여 연차"
-        action={
-          <Button variant="ghost" size="sm" onClick={onEditTotal}>
-            총 연차 설정
-          </Button>
-        }
-      >
+      {/* 총 연차는 프로필 설정에서 바꾼다 */}
+      <Card className="md:col-span-3" eyebrow="잔여 연차">
         <div className="flex items-end justify-between">
           <p className="text-heading-sm font-bold tabular-nums md:text-heading-lg">{fmtDays(summary.remaining)}</p>
           <p className="text-body-sm text-mid">총 {fmtDays(summary.total)}</p>
@@ -262,34 +245,5 @@ function HistoryTab({ leaves, onEdit, onRemove }: { leaves: Leave[]; onEdit: (l:
         </div>
       )}
     </Card>
-  )
-}
-
-/* ---------- 총 연차 설정 ---------- */
-function TotalLeaveModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { state, dispatch } = useApp()
-  const [value, setValue] = useState(String(state.settings.totalLeave))
-  return (
-    <Modal open={open} onClose={onClose} title="총 연차 설정">
-      <div className="space-y-5">
-        <Field label={`${state.settings.year}년 총 연차`} hint="U+웍스 연동 시 자동으로 채워질 예정입니다.">
-          <Input type="number" step="0.5" min="0" value={value} onChange={(e) => setValue(e.target.value)} />
-        </Field>
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
-            취소
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={() => {
-              dispatch({ type: 'settings/update', payload: { totalLeave: Number(value) || 0 } })
-              onClose()
-            }}
-          >
-            저장
-          </Button>
-        </div>
-      </div>
-    </Modal>
   )
 }
