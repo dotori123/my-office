@@ -79,6 +79,168 @@ export function ProjectMock() {
   )
 }
 
+/**
+ * 연차 추천 — 일주일 띠.
+ * 연차 하루가 공휴일·주말과 이어져 연속 휴식이 되는 걸 한눈에 보여 준다.
+ * 2026년 추석(9/24–26) 기준 실제 달력이다.
+ */
+export function RecommendStrip() {
+  type Kind = 'work' | 'leave' | 'holiday' | 'weekend'
+  const days: { d: number; w: string; kind: Kind; tag?: string }[] = [
+    { d: 21, w: '월', kind: 'work' },
+    { d: 22, w: '화', kind: 'work' },
+    { d: 23, w: '수', kind: 'leave', tag: '연차' },
+    { d: 24, w: '목', kind: 'holiday', tag: '연휴' },
+    { d: 25, w: '금', kind: 'holiday', tag: '추석' },
+    { d: 26, w: '토', kind: 'holiday', tag: '연휴' },
+    { d: 27, w: '일', kind: 'weekend', tag: '주말' },
+  ]
+  const cell: Record<Kind, string> = {
+    work: 'border border-hairline bg-paper text-mid',
+    leave: 'bg-citrus text-ink',
+    holiday: 'bg-blush text-ink',
+    weekend: 'bg-wash text-ink',
+  }
+  const restStart = days.findIndex((x) => x.kind !== 'work') + 1
+  const restCount = days.length - restStart + 1
+
+  return (
+    <div>
+      {/* 쉬는 날 위로 걸치는 브래킷 */}
+      <div className="mb-2 grid grid-cols-7 gap-1.5">
+        <div className="flex items-center gap-2" style={{ gridColumn: `${restStart} / span ${restCount}` }}>
+          <span className="h-px flex-1 bg-ink" />
+          <span className="whitespace-nowrap text-micro font-medium">연속 휴식 {restCount}일</span>
+          <span className="h-px flex-1 bg-ink" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((x) => (
+          <div key={x.d} className={cx('flex flex-col items-center rounded-[12px] px-1 pb-2 pt-2.5', cell[x.kind])}>
+            <span className="text-micro opacity-70">{x.w}</span>
+            <span className={cx('mt-0.5 text-body-sm tabular-nums', x.kind === 'leave' ? 'font-bold' : 'font-medium')}>{x.d}</span>
+            <span className="mt-1.5 h-4 text-[11px] leading-4">{x.tag ?? ' '}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-micro text-mid">
+        {[
+          ['bg-citrus', '연차 1일'],
+          ['bg-blush', '추석 연휴'],
+          ['bg-wash', '주말'],
+        ].map(([color, label]) => (
+          <span key={label} className="flex items-center gap-1.5">
+            <span className={cx('size-2 rounded-full', color)} />
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 지원비 잔액 — 카테고리별로 나눠 칠한 막대.
+ * 대시보드 목업과 같은 숫자(총 300,000원 중 291,000원 사용)를 쓴다.
+ */
+export function BenefitBreakdown() {
+  const total = 300000
+  const parts = [
+    { label: '도서', amount: 66000, color: 'bg-starlight' },
+    { label: '교육', amount: 120000, color: 'bg-sky' },
+    { label: '소프트웨어', amount: 105000, color: 'bg-silver' },
+  ]
+  const used = parts.reduce((s, p) => s + p.amount, 0)
+  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`
+
+  return (
+    <div>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-caption text-mid">남은 지원비</p>
+          <p className="mt-1 text-heading-sm font-bold tabular-nums md:text-heading">{won(total - used)}</p>
+        </div>
+        <p className="text-body-sm text-mid">총 {won(total)}</p>
+      </div>
+
+      <div className="mt-6 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-paper">
+        {parts.map((p) => (
+          <div key={p.label} className={cx('h-full', p.color)} style={{ width: `${(p.amount / total) * 100}%` }} />
+        ))}
+      </div>
+      <p className="mt-2 text-right text-micro text-mid">사용률 {Math.round((used / total) * 100)}%</p>
+
+      <ul className="mt-5 grid grid-cols-3 gap-3">
+        {parts.map((p) => (
+          <li key={p.label} className="rounded-[16px] bg-paper p-4">
+            <p className="flex items-center gap-1.5 text-caption text-mid">
+              <span className={cx('size-2 rounded-full', p.color)} />
+              {p.label}
+            </p>
+            <p className="mt-1 text-body-sm font-medium tabular-nums">{won(p.amount)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** 지원비 최근 사용 — 합산 건이 펼쳐진 모습 */
+export function BenefitRecent() {
+  const rows: { date: string; name: string; cat: string; amount: string; parts?: [string, string][] }[] = [
+    {
+      date: '09.17',
+      name: 'Claude Pro 3개월 구독',
+      cat: '소프트웨어',
+      amount: '60,000원',
+      parts: [
+        ['09.03', '20,000원'],
+        ['09.10', '20,000원'],
+        ['09.17', '20,000원'],
+      ],
+    },
+    { date: '09.10', name: 'UX 라이팅 워크숍', cat: '교육', amount: '42,000원' },
+    { date: '09.02', name: 'IntelliJ 연간 구독', cat: '소프트웨어', amount: '45,000원' },
+  ]
+  return (
+    <ul className="space-y-2">
+      {rows.map((r) => (
+        <li key={r.date + r.name} className="rounded-[16px] bg-paper px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-body-sm font-medium">{r.name}</p>
+              <p className="text-caption text-mid">
+                {r.date} · {r.cat}
+              </p>
+              {r.parts && (
+                <p className="flex items-center gap-1 text-caption text-mid">
+                  {r.parts.length}건 합산
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="rotate-180">
+                    <path d="M3 4.5l3 3 3-3" />
+                  </svg>
+                </p>
+              )}
+            </div>
+            <span className="shrink-0 text-body-sm font-medium tabular-nums">{r.amount}</span>
+          </div>
+          {r.parts && (
+            <ul className="mt-2 space-y-1 border-l border-hairline pl-3 text-micro text-mid">
+              {r.parts.map(([d, a]) => (
+                <li key={d} className="flex justify-between tabular-nums">
+                  <span>{d} · Claude Pro 1개월 구독</span>
+                  <span>{a}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 /** 대시보드 전체 미리보기 */
 export function DashboardMock() {
   return (

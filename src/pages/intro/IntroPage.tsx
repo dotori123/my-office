@@ -4,7 +4,7 @@ import { Band, Card } from '@/components/ui'
 import CalendarGrid from './CalendarGrid'
 import CountUp from './CountUp'
 import Reveal from './Reveal'
-import { BenefitMock, CalendarMock, DashboardMock, LeaveMock, ProjectMock } from './Mocks'
+import { BenefitBreakdown, BenefitMock, BenefitRecent, CalendarMock, DashboardMock, LeaveMock, ProjectMock, RecommendStrip } from './Mocks'
 import { ramp, useStageProgress } from './useStageProgress'
 
 /**
@@ -44,9 +44,9 @@ const FEATURES = [
 ]
 
 const STEPS = [
-  { no: '01', title: '복사', body: '근태관리 › 내 출근부 › 휴가세부내역 에서 표를 드래그해 복사합니다.' },
-  { no: '02', title: '붙여넣기', body: '연차 페이지의 가져오기 창에 그대로 붙여넣으면 날짜·유형·일수를 알아서 읽습니다.' },
-  { no: '03', title: '확인', body: '가져오기 전에 인식 결과를 미리 보여줍니다. 이미 등록된 건은 자동으로 제외돼요.' },
+  { no: '01', title: '복사', body: '근태관리의 휴가세부내역 표나 지출결의서 목록을 드래그해 복사합니다.' },
+  { no: '02', title: '붙여넣기', body: '연차·지원비 페이지의 가져오기 창에 그대로 붙여넣으면 날짜·유형·금액을 알아서 읽습니다.' },
+  { no: '03', title: '확인', body: '가져오기 전에 인식 결과를 미리 보여줍니다. 이미 등록된 건은 제외되고, 같은 항목은 하나로 합칠 수 있어요.' },
 ]
 
 const PRIVACY = [
@@ -149,12 +149,16 @@ export default function IntroPage() {
           <div className="mx-auto mt-8 max-w-[720px]">
             <Card>
               <p className="text-micro font-medium text-ember">추천</p>
-              <p className="mt-2 text-subheading font-semibold md:text-heading-sm">9월 23일 (수)에 연차를 사용하면</p>
+              <p className="mt-2 text-subheading font-semibold md:text-heading-sm">9월 23일 (수) 하루만 쓰면</p>
+              <p className="mt-2 text-body-sm text-mid">추석 연휴·주말과 이어져 수요일부터 일요일까지 쉴 수 있어요.</p>
+              <div className="mt-7">
+                <RecommendStrip />
+              </div>
               <div className="mt-6 grid grid-cols-3 gap-3">
                 {[
-                  ['휴식 기간', '09.22 – 09.28'],
-                  ['연속 휴식', '7일'],
                   ['사용 연차', '1일'],
+                  ['연속 휴식', '5일'],
+                  ['휴식 기간', '09.23 – 09.27'],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-[16px] bg-canvas p-4">
                     <p className="text-caption text-mid">{label}</p>
@@ -162,7 +166,6 @@ export default function IntroPage() {
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-body-sm text-mid">추석 연휴와 연결</p>
             </Card>
           </div>
         </Reveal>
@@ -170,7 +173,7 @@ export default function IntroPage() {
         <div className="mx-auto mt-12 grid max-w-[720px] grid-cols-3 gap-5 text-center">
           {[
             { to: 1, suffix: '일', label: '사용한 연차' },
-            { to: 7, suffix: '일', label: '연속 휴식' },
+            { to: 5, suffix: '일', label: '연속 휴식' },
             { to: 0.25, suffix: '일', label: '계산 단위', decimals: 2 },
           ].map((s, i) => (
             <Reveal key={s.label} delay={i * 0.1}>
@@ -180,6 +183,31 @@ export default function IntroPage() {
               <p className="mt-1 text-caption text-mid">{s.label}</p>
             </Reveal>
           ))}
+        </div>
+      </Band>
+
+      {/* 2-1 — 지원비 */}
+      <Band inner="py-20 md:py-28">
+        <Reveal>
+          <div className="mx-auto max-w-[560px] text-center">
+            <p className="text-caption text-mid">BENEFIT</p>
+            <h2 className="mt-3 text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">얼마 남았는지, 어디에 썼는지.</h2>
+            <p className="mt-4 text-body-sm text-mid">
+              도서·교육·소프트웨어를 따로 세지 않아도 돼요. 총 지원금에서 쓴 만큼 빼고, 카테고리별 비중과 최근 사용을 함께 보여줍니다.
+            </p>
+          </div>
+        </Reveal>
+        <div className="mx-auto mt-12 grid max-w-[880px] gap-5 md:grid-cols-5">
+          <Reveal className="md:col-span-3">
+            <Card tone="gray">
+              <BenefitBreakdown />
+            </Card>
+          </Reveal>
+          <Reveal delay={0.1} className="md:col-span-2">
+            <Card tone="gray" title="최근 사용">
+              <BenefitRecent />
+            </Card>
+          </Reveal>
         </div>
       </Band>
 
@@ -263,7 +291,7 @@ export default function IntroPage() {
         <Reveal>
           <p className="text-caption text-mid">IMPORT</p>
           <h2 className="mt-3 max-w-[620px] text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
-            근태 시스템의 표를
+            근태 시스템의 표도, 지출결의서도
             <br />
             그대로 붙여넣으세요.
           </h2>
@@ -306,6 +334,37 @@ export default function IntroPage() {
                   </li>
                 ))}
               </ul>
+            </Card>
+          </div>
+        </Reveal>
+
+        {/* 지출결의서 — 세로로 나열된 건을 읽고 같은 항목을 합친다 */}
+        <Reveal delay={0.1}>
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <Card tone="gray">
+              <p className="text-micro text-mid">붙여넣은 지출결의서</p>
+              <pre className="mt-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-deep">
+                {`2026-09-03
+Claude Pro 1개월 구독
+개인카드 / 20,000원
+2026-09-10
+Claude Pro 1개월 구독
+개인카드 / 20,000원
+2026-09-17
+Claude Pro 1개월 구독
+개인카드 / 20,000원`}
+              </pre>
+            </Card>
+            <Card tone="gray">
+              <p className="text-micro text-mid">인식 결과 · 같은 항목 합치기</p>
+              <div className="mt-3 flex items-center gap-2.5 text-caption">
+                <span className="tabular-nums">09.17</span>
+                <span className="rounded-[36px] bg-silver px-2 py-0.5 text-micro">소프트웨어</span>
+                <span className="min-w-0 flex-1 truncate">Claude Pro 3개월 구독</span>
+                <span className="ml-auto shrink-0 tabular-nums">60,000원</span>
+              </div>
+              <p className="mt-1.5 pl-[42px] text-micro text-mid">09.03 – 09.17 · 3건 합산</p>
+              <p className="mt-4 text-caption text-mid">'개인카드 /' 같은 구분자는 걸러내고, 이름의 개월 수는 더해서 하나로 만듭니다.</p>
             </Card>
           </div>
         </Reveal>
