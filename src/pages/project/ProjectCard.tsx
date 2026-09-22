@@ -45,7 +45,8 @@ export default function ProjectCard({
   return (
     <Card
       tone={tone}
-      eyebrow={project.pinned ? '고정됨' : undefined}
+      // Dashboard 에 올라와 있는 것 자체가 고정됐다는 뜻이라 거기서는 라벨을 생략
+      eyebrow={project.pinned && !compact ? '고정됨' : undefined}
       title={project.name}
       action={action}
       className={cx(compact && 'p-6')}
