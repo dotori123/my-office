@@ -14,8 +14,38 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#ffffff" />
 
-    <title>MY OFFICE</title>
-    <meta name="description" content="회사생활에 필요한 개인 정보를 한곳에서. 연차·지원비·일정·프로젝트 바로가기." />
+    <title>MY OFFICE — 나의 회사생활 대시보드</title>
+    <meta name="description" content="남은 연차, 지원비 잔액, 다음 휴일까지 며칠 남았는지. 회사생활에 필요한 개인 정보를 열자마자 한 화면에서 확인하세요." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+    <!-- 경로별 title · description · canonical 은 src/hooks/useSeo.ts 가 라우트마다 덮어쓴다 -->
+
+    <!-- 구조화 데이터 — 검색엔진·AI 크롤러가 JS 없이도 읽을 수 있게 정적으로 둔다 -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MY OFFICE",
+        "alternateName": "마이 오피스",
+        "url": "%VITE_SITE_URL%/",
+        "description": "회사생활에 필요한 개인 정보 — 연차, 지원비, 일정, 프로젝트 링크 — 를 한 화면에 모아 보는 개인용 웹 대시보드. 로그인 없이 쓰며 데이터는 브라우저에만 저장됩니다.",
+        "inLanguage": "ko",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+        "screenshot": "%VITE_SITE_URL%/favicon/og-image.png",
+        "featureList": [
+          "연차 잔여·사용·예정 계산 (반차·반반차 0.25일 단위)",
+          "공휴일·주말과 이어 가장 길게 쉬는 연차 날짜 추천",
+          "도서·교육·소프트웨어 지원비 잔액과 카테고리별 비중",
+          "공휴일·연차·회사 일정·개인 일정 통합 캘린더",
+          "프로젝트별 링크 바로가기",
+          "근태 시스템 표·지출결의서 붙여넣기로 가져오기"
+        ]
+      }
+    </script>
 
     <!-- Open Graph -->
     <!-- 절대 URL 은 .env 의 VITE_SITE_URL 로 치환됩니다 -->
@@ -23,7 +53,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MY OFFICE" />
     <meta property="og:title" content="MY OFFICE — 회사생활, 이것저것 찾지 말고 한눈에" />
-    <meta property="og:description" content="남은 연차, 지원비 잔액, 다음 휴일, 언제 연차를 쓰면 좋은지. 나만의 대시보드에서 빠르게 확인하세요." />
+    <meta property="og:description" content="남은 연차, 지원비 잔액, 다음 휴일까지 며칠 남았는지. 회사생활에 필요한 개인 정보를 열자마자 한 화면에서 확인하세요." />
     <meta property="og:image" content="%VITE_SITE_URL%/favicon/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -34,7 +64,7 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MY OFFICE — 회사생활, 이것저것 찾지 말고 한눈에" />
-    <meta name="twitter:description" content="남은 연차, 지원비 잔액, 다음 휴일, 언제 연차를 쓰면 좋은지. 나만의 대시보드에서 빠르게 확인하세요." />
+    <meta name="twitter:description" content="남은 연차, 지원비 잔액, 다음 휴일까지 며칠 남았는지. 회사생활에 필요한 개인 정보를 열자마자 한 화면에서 확인하세요." />
     <meta name="twitter:image" content="%VITE_SITE_URL%/favicon/og-image.png" />
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />

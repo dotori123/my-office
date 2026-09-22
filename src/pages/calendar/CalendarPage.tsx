@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { CalendarEvent } from '@/types'
 import { useApp } from '@/store/AppContext'
+import { useSeo } from '@/hooks/useSeo'
 import { ArrowLink, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, cx } from '@/components/ui'
 import { HOLIDAYS_2026 } from '@/data/holidays'
 import { addDays, fmtKo, fromKey, isWeekend, monthGrid, today, weekdayKo } from '@/utils/date'
@@ -11,6 +12,11 @@ import { EVENT_STYLE, type UnifiedEvent } from './eventStyle'
 const WEEK_HEADER = ['월', '화', '수', '목', '금', '토', '일']
 
 export default function CalendarPage() {
+  useSeo({
+    title: '캘린더 — MY OFFICE',
+    description: '공휴일·연차·회사 일정·개인 일정을 한 달력에서. 회사 휴무일을 등록하면 연차 계산과 추천에 함께 반영됩니다.',
+    path: '/calendar',
+  })
   const { state, dispatch } = useApp()
   const { leaves, events, settings } = state
   const base = today()

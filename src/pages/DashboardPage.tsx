@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '@/store/AppContext'
+import { useSeo } from '@/hooks/useSeo'
 import { ArrowLink, Band, Card, ProgressBar, cx } from '@/components/ui'
 import { HOLIDAYS_2026 } from '@/data/holidays'
 import { addDays, buildDayOffContext, countWorkingDays, diffDays, fmtFull, fmtShort, isDayOff, tenureText, today, weekdayKo } from '@/utils/date'
@@ -12,6 +13,11 @@ import ProjectCard from '@/pages/project/ProjectCard'
 import { useOpenProfile } from '@/components/layout/ProfileModal'
 
 export default function DashboardPage() {
+  useSeo({
+    title: 'MY OFFICE — 나의 회사생활 대시보드',
+    description: '남은 연차, 지원비 잔액, 다음 휴일까지 며칠 남았는지. 회사생활에 필요한 개인 정보를 열자마자 한 화면에서 확인하세요.',
+    path: '/',
+  })
   const { state } = useApp()
   const { user, settings, leaves, benefits, events, projects } = state
   const base = today()

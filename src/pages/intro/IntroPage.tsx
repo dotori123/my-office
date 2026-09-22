@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Band, Card } from '@/components/ui'
+import { useSeo } from '@/hooks/useSeo'
 import CalendarGrid from './CalendarGrid'
 import CountUp from './CountUp'
 import Reveal from './Reveal'
@@ -55,9 +56,51 @@ const PRIVACY = [
   ['로그인이 없습니다', '계정을 만들 필요 없이 열어서 바로 쓰면 됩니다.'],
 ]
 
+/** 자주 묻는 질문. 화면에도 그리고, 같은 내용을 FAQPage 구조화 데이터로도 내보낸다 */
+const FAQ = [
+  {
+    q: '데이터는 어디에 저장되나요?',
+    a: '입력한 연차·지원비·일정은 사용 중인 브라우저의 저장소(localStorage)에만 남고, 서버로 전송되지 않습니다. 브라우저 데이터를 지우면 함께 사라지니 필요하면 다른 곳에 따로 적어 두세요.',
+  },
+  {
+    q: '로그인이나 회원가입이 필요한가요?',
+    a: '없습니다. 계정을 만들지 않고 주소를 열면 바로 쓸 수 있습니다.',
+  },
+  {
+    q: '연차 추천은 어떻게 계산하나요?',
+    a: '공휴일·주말·회사 휴무일과 이미 등록한 연차를 함께 보고, 연차 하루를 어디에 쓰면 가장 길게 연속으로 쉴 수 있는지 계산해 효율이 좋은 날짜부터 순서대로 보여줍니다.',
+  },
+  {
+    q: '근태 시스템이나 지출결의서의 내용을 어떻게 가져오나요?',
+    a: '근태 시스템의 휴가 내역 표나 지출결의서 목록을 드래그해 복사한 뒤 가져오기 창에 붙여넣으면 날짜·유형·금액을 알아서 읽습니다. 이미 등록된 건은 제외되고, 이름이 같은 항목은 하나로 합칠 수 있습니다.',
+  },
+  {
+    q: '회사의 근태 시스템이나 경비 시스템을 대체하나요?',
+    a: '아니요. MY OFFICE는 기존 시스템에 흩어져 있는 정보 중 내가 자주 확인하는 것만 모아 개인 관점으로 보여주는 도구입니다. 급여·평가·계좌 같은 민감정보는 다루지 않습니다.',
+  },
+]
+
+const FAQ_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+}
+
 const ctaClass = 'rounded-pill bg-blue px-7 py-[15px] text-body-sm text-paper transition-colors hover:bg-blue-hover'
 
 export default function IntroPage() {
+  useSeo({
+    title: 'MY OFFICE 소개 — 회사생활, 이것저것 찾지 말고 한눈에',
+    description:
+      '연차·지원비·캘린더·프로젝트 바로가기를 한곳에 모은 개인용 회사생활 대시보드. 근태 시스템 표와 지출결의서를 붙여넣기만 하면 되고, 데이터는 브라우저에만 저장됩니다.',
+    path: '/intro',
+    jsonLd: FAQ_JSON_LD,
+  })
+
   const stageRef = useRef<HTMLElement>(null)
   const progress = useStageProgress(stageRef)
 
@@ -97,7 +140,7 @@ export default function IntroPage() {
   }, [progress])
 
   return (
-    <div className="min-h-dvh bg-paper text-ink">
+    <main className="min-h-dvh bg-paper text-ink">
       {/* 1 — 스크롤 스테이지. 3D 격자가 붙어 있는 동안 문구가 바뀐다 */}
       <section ref={stageRef} className="relative h-[250vh]">
         <div className="sticky top-0 h-dvh overflow-hidden">
@@ -394,7 +437,31 @@ Claude Pro 1개월 구독
         </div>
       </Band>
 
-      {/* 8 — 마무리 */}
+      {/* 8 — FAQ */}
+      <Band inner="py-20 md:py-32">
+        <div className="md:grid md:grid-cols-2 md:gap-16">
+          <Reveal>
+            <p className="text-caption text-mid">FAQ</p>
+            <h2 className="mt-3 text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
+              자주 묻는
+              <br />
+              질문.
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <dl className="mt-8 space-y-6 md:mt-2">
+              {FAQ.map(({ q, a }) => (
+                <div key={q} className="border-t border-hairline pt-5">
+                  <dt className="text-body-sm font-medium">{q}</dt>
+                  <dd className="mt-2 text-body-sm text-mid">{a}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </div>
+      </Band>
+
+      {/* 9 — 마무리 */}
       <section className="overflow-hidden py-28 md:py-40">
         <Reveal>
           <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 text-center md:px-10">
@@ -414,6 +481,6 @@ Claude Pro 1개월 구독
         </div>
         <p className="mt-16 text-center text-micro text-mid">MY OFFICE — 나의 회사생활 정보</p>
       </section>
-    </div>
+    </main>
   )
 }

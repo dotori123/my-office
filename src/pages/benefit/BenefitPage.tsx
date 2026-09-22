@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BENEFIT_CATEGORIES, type Benefit, type BenefitCategory } from '@/types'
 import { useApp } from '@/store/AppContext'
+import { useSeo } from '@/hooks/useSeo'
 import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Modal, MoneyInput, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today } from '@/utils/date'
 import { fmtWon } from '@/utils/format'
@@ -26,6 +27,11 @@ const CATEGORY_STYLE: Record<string, string> = {
 const catStyle = (c: string) => CATEGORY_STYLE[c] ?? 'bg-wash'
 
 export default function BenefitPage() {
+  useSeo({
+    title: '지원비 — MY OFFICE',
+    description: '도서·교육·소프트웨어 지원비를 한곳에서. 월별 사용액과 카테고리별 비중을 보여주고, 잔액을 자동으로 계산합니다.',
+    path: '/benefit',
+  })
   const { state, dispatch } = useApp()
   const { benefits, settings } = state
   const [params, setParams] = useSearchParams()

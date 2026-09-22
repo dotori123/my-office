@@ -1,11 +1,17 @@
 import { useMemo, useState } from 'react'
 import type { Project } from '@/types'
 import { useApp } from '@/store/AppContext'
+import { useSeo } from '@/hooks/useSeo'
 import { Band, Button, Card, ConfirmDialog, EmptyState, Input, PageHero } from '@/components/ui'
 import ProjectCard from './ProjectCard'
 import ProjectForm from './ProjectForm'
 
 export default function ProjectPage() {
+  useSeo({
+    title: '프로젝트 바로가기 — MY OFFICE',
+    description: '테스트·운영 서버, WBS, 저장소, 디자인 링크를 프로젝트별로 모아두고 한 번에 엽니다.',
+    path: '/projects',
+  })
   const { state, dispatch } = useApp()
   const { projects } = state
   const [formOpen, setFormOpen] = useState(false)

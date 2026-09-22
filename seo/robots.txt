@@ -1,0 +1,5 @@
+# 모든 크롤러(검색엔진·AI 크롤러 포함) 허용
+User-agent: *
+Allow: /
+
+Sitemap: %VITE_SITE_URL%/sitemap.xml

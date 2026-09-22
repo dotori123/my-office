@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { Leave } from '@/types'
 import { useApp } from '@/store/AppContext'
+import { useSeo } from '@/hooks/useSeo'
 import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today, weekdayKo } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
@@ -18,6 +19,11 @@ const TABS: { key: Tab; label: string }[] = [
 ]
 
 export default function LeavePage() {
+  useSeo({
+    title: '연차 — MY OFFICE',
+    description: '총 연차·사용·예정·잔여를 한눈에. 반차·반반차까지 0.25일 단위로 계산하고, 공휴일과 이어 가장 길게 쉬는 날짜를 추천합니다.',
+    path: '/leave',
+  })
   const { state, dispatch } = useApp()
   const { leaves, settings } = state
   const [params, setParams] = useSearchParams()
