@@ -233,12 +233,7 @@ function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdi
                             </svg>
                           </button>
                         ) : (
-                          (b.memo || b.receipt) && (
-                            <p className="truncate text-caption text-mid">
-                              {b.memo}
-                              {b.receipt && ` · 첨부 ${b.receipt}`}
-                            </p>
-                          )
+                          b.memo && <p className="truncate text-caption text-mid">{b.memo}</p>
                         )}
                       </div>
                       <span className="ml-auto shrink-0 text-body-sm font-medium tabular-nums">{fmtWon(b.amount)}</span>

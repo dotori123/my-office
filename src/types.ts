@@ -46,7 +46,6 @@ export interface Benefit {
   amount: number
   category: BenefitCategory
   memo?: string
-  receipt?: string // 증빙자료 파일명 (프론트 단계에서는 이름만 보관)
   /** 합산 건이면 원본 목록. 내역에서 펼쳐 볼 수 있다 */
   parts?: BenefitPart[]
 }

@@ -19,7 +19,6 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
   /** '기타'를 골랐을 때 직접 입력하는 이름 */
   const [customCategory, setCustomCategory] = useState('')
   const [memo, setMemo] = useState('')
-  const [receipt, setReceipt] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -31,7 +30,6 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
     setCategory(initial ? (preset ? initial.category : '기타') : '도서')
     setCustomCategory(initial && !preset ? initial.category : '')
     setMemo(initial?.memo ?? '')
-    setReceipt(initial?.receipt ?? '')
   }, [open, initial])
 
   const submit = () => {
@@ -41,7 +39,6 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
       amount: Number(amount) || 0,
       category: category === '기타' && customCategory.trim() ? customCategory.trim() : category,
       memo: memo.trim() || undefined,
-      receipt: receipt || undefined,
     }
     if (initial) dispatch({ type: 'benefit/update', payload: { ...initial, ...payload } })
     else dispatch({ type: 'benefit/add', payload })
@@ -83,15 +80,6 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
         <Field label="메모">
           <Input placeholder="선택" value={memo} onChange={(e) => setMemo(e.target.value)} />
         </Field>
-        {/*<Field label="증빙자료" hint="프론트 단계에서는 파일명만 저장됩니다.">
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={(e) => setReceipt(e.target.files?.[0]?.name ?? '')}
-            className="block w-full text-caption text-mid file:mr-3 file:rounded-pill file:border-0 file:bg-wash file:px-4 file:py-1.5 file:text-caption file:text-ink hover:file:bg-hairline"
-          />
-          {receipt && <span className="mt-1.5 block text-micro text-mid">첨부: {receipt}</span>}
-        </Field>*/}
         <div className="flex gap-2 pt-2">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             취소
