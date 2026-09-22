@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
 import type { Benefit, BenefitPart } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Badge, Button, Modal, cx } from '@/components/ui'
 import { fmtShort, weekdayKo } from '@/utils/date'
 import { fmtWon } from '@/utils/format'
 import { parseBenefits, type ParsedBenefit } from '@/utils/parseBenefits'
+import { recognizeImage } from '@/utils/ocr'
 
 const PLACEHOLDER = `카드 사용내역이나 지출결의서 목록을 복사해서 붙여넣으세요.
+지출결의서를 캡처한 이미지를 붙여넣거나 끌어다 놓아도 됩니다.
 
 예)
 2026-09-02  IntelliJ  149,000  소프트웨어
@@ -73,27 +75,67 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
   const [text, setText] = useState('')
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [merge, setMerge] = useState(false)
+  /** 결재일이 있으면 지출일 대신 결재일로 등록 */
+  const [useApproval, setUseApproval] = useState(true)
+  const [ocr, setOcr] = useState<{ busy: boolean; error?: string }>({ busy: false })
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) return
     setText('')
     setExcluded(new Set())
     setMerge(false)
+    setUseApproval(true)
+    setOcr({ busy: false })
   }, [open])
+
+  /** 이미지에서 글자를 읽어 입력창 끝에 붙인다 */
+  const readImages = async (files: File[]) => {
+    const images = files.filter((f) => f.type.startsWith('image/'))
+    if (!images.length) return
+    setOcr({ busy: true })
+    try {
+      const texts = await Promise.all(images.map(recognizeImage))
+      setText((prev) => [prev.trim(), ...texts].filter(Boolean).join('\n'))
+      setOcr({ busy: false })
+    } catch (e) {
+      setOcr({ busy: false, error: e instanceof Error ? e.message : '이미지를 읽지 못했어요' })
+    }
+  }
+
+  const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = [...e.clipboardData.files]
+    if (!files.some((f) => f.type.startsWith('image/'))) return
+    e.preventDefault()
+    void readImages(files)
+  }
+
+  const onDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    void readImages([...e.dataTransfer.files])
+  }
 
   const existing = useMemo(() => new Set(benefits.map(signature)), [benefits])
 
   const parsed = useMemo(() => {
     const { rows, skipped, approvalDate } = parseBenefits(text, settings.year)
     const mergedAll = mergeSameName(rows, approvalDate)
-    const items: (ParsedBenefit & { parts?: BenefitPart[] })[] = merge ? mergedAll : rows
+    let items: (ParsedBenefit & { parts?: BenefitPart[] })[] = merge ? mergedAll : rows
+    // 지출결의서는 결재일에 지급되므로 그 날짜로 등록하고, 실제 지출일은 메모에 남긴다
+    if (approvalDate && useApproval) {
+      items = items.map((r) =>
+        r.parts || r.date === approvalDate
+          ? r
+          : { ...r, date: approvalDate, memo: [`지출일 ${fmtShort(r.date)}`, r.memo].filter(Boolean).join(' · ') },
+      )
+    }
     return {
       items: items.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })),
       skipped,
       approvalDate,
       mergeable: rows.length - mergedAll.length,
     }
-  }, [text, settings.year, existing, merge])
+  }, [text, settings.year, existing, merge, useApproval])
 
   const isOn = (row: (typeof parsed.items)[number]) => !row.duplicate && !excluded.has(row.key)
   const selected = parsed.items.filter(isOn)
@@ -127,13 +169,36 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onPaste={onPaste}
+            onDrop={onDrop}
+            onDragOver={(e) => e.preventDefault()}
             placeholder={PLACEHOLDER}
             rows={6}
             className="w-full resize-y rounded-[12px] border border-hairline bg-paper px-4 py-3 text-caption leading-relaxed text-ink outline-none placeholder:text-mid focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
-          <p className="mt-1.5 text-micro text-mid">
-            날짜와 금액이 있는 줄만 가져옵니다. 카테고리는 항목명에서 자동으로 추정하고, 가져온 뒤 수정할 수 있어요.
-          </p>
+          <div className="mt-1.5 flex items-start justify-between gap-3">
+            <p className="text-micro text-mid">
+              {ocr.busy
+                ? '이미지에서 글자를 읽는 중… 처음에는 한국어 데이터를 받느라 조금 걸려요.'
+                : ocr.error
+                  ? `이미지를 읽지 못했어요 — ${ocr.error}`
+                  : '날짜와 금액이 있는 줄만 가져옵니다. 카테고리는 항목명에서 자동으로 추정하고, 가져온 뒤 수정할 수 있어요.'}
+            </p>
+            <Button variant="ghost" size="sm" className="shrink-0 px-0" disabled={ocr.busy} onClick={() => fileRef.current?.click()}>
+              이미지 선택
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void readImages([...(e.target.files ?? [])])
+                e.target.value = ''
+              }}
+            />
+          </div>
         </div>
 
         {text.trim() && (
@@ -175,6 +240,21 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
                   )
                 })}
               </ul>
+            )}
+
+            {parsed.approvalDate && (
+              <label className="mt-3 flex items-start gap-2 rounded-[16px] bg-canvas px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 accent-blue"
+                  checked={useApproval}
+                  onChange={(e) => setUseApproval(e.target.checked)}
+                />
+                <span className="text-micro leading-relaxed text-deep">
+                  결재일 {fmtShort(parsed.approvalDate)} 로 등록하기
+                  <span className="mt-0.5 block text-mid">지출결의서는 결재일에 지급되므로 그 날짜로 잡고, 실제 지출일은 메모에 남깁니다.</span>
+                </span>
+              </label>
             )}
 
             {(parsed.mergeable > 0 || merge) && (

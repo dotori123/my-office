@@ -46,12 +46,43 @@ const NOISE_TOKENS = new Set([
 
 const HEADER_WORDS = /사용일|사용처|금액|항목|구분|분류|내역|비고|합계|잔액|승인일|거래|가맹점|적요/
 
+/** 금액으로 볼 토큰. 네 자리 숫자만 있는 건 연도·모델명일 수 있어 콤마나 '원'이 붙거나 다섯 자리 이상일 때만 */
+const MONEY_TOKEN = /^\(?-?\d{1,3}(?:,\d{3})+원?\)?$|^-?\d{5,}원?$|^-?\d+원$/
+const DATE_TOKEN = /^\d{4}[-./]\d{1,2}[-./]\d{1,2}$|^\d{1,2}[-./]\d{1,2}$/
+
+/**
+ * 한 칸 안에서 날짜·금액 토큰을 따로 떼어낸다.
+ * OCR 결과처럼 공백 하나로만 이어진 줄도 이걸로 칸이 나뉜다.
+ *   "2026-08-06 한국생산성본부 주관 AIBT 정기시험 응시 69,000 도서지원비"
+ *   → ["2026-08-06", "한국생산성본부 주관 AIBT 정기시험 응시", "69,000", "도서지원비"]
+ */
+const splitTokens = (cell: string) => {
+  const out: string[] = []
+  let words: string[] = []
+  const flush = () => {
+    if (words.length) out.push(words.join(' '))
+    words = []
+  }
+  for (const tok of cell.split(/\s+/)) {
+    if (DATE_TOKEN.test(tok) || MONEY_TOKEN.test(tok)) {
+      flush()
+      out.push(tok.replace(/^\(|\)$/g, ''))
+    } else words.push(tok)
+  }
+  flush()
+  return out
+}
+
+/** 칸 앞뒤에 붙은 구분자·OCR 찌꺼기 ('개인카드 /', '_ 도서지원비', '금액 "') */
+const EDGE_JUNK = /^[\s_"'*~·ㆍ|/]+|[\s_"'*~·ㆍ|/]+$/g
+
+/** 칸 나누기. 탭·두 칸 이상의 공백·세로줄을 경계로 보고, 글자도 숫자도 없는 칸은 버린다 */
 const cellsOf = (line: string) =>
   line
-    .split(/\t| {2,}/)
-    // '개인카드 /' 처럼 뒤에 붙은 구분자를 떼어낸다
-    .map((c) => c.replace(/\s*[/|]\s*$/, '').trim())
-    .filter(Boolean)
+    .split(/\t| {2,}|\|/)
+    .flatMap(splitTokens)
+    .map((c) => c.replace(EDGE_JUNK, ''))
+    .filter((c) => /[\p{L}\p{N}]/u.test(c))
 
 /** 날짜 하나만 있는 줄 */
 const DATE_ONLY = /^\d{4}\s*[-./년]\s*\d{1,2}\s*[-./월]\s*\d{1,2}\s*일?$/
@@ -59,14 +90,20 @@ const DATE_ONLY = /^\d{4}\s*[-./년]\s*\d{1,2}\s*[-./월]\s*\d{1,2}\s*일?$/
 /** 이 줄부터는 꼬리말 — 합계·계좌 정보가 본문으로 섞이지 않게 잘라낸다 */
 const FOOTER = /^합\s*계|지급\s*계좌|계좌\s*번호|예금주|은행명/
 /** 라벨만 있는 줄 — 조용히 버린다 */
-const LABEL_ONLY = /^(성\s*명|부\s*서|직\s*위|결\s*재\s*일|지출금액|제\s*목|내\s*역|지출일자|지출내역|금\s*액|비\s*고|일금|원정)/
+const LABEL_ONLY = /^(성\s*명|부\s*서|직\s*위|결\s*재\s*일|지출\s*금[액맥]|제\s*목|내\s*역|지출\s*일자|지출\s*내역|금\s*[액맥]|비\s*고|일금|원정)/
 /** 결재일 라벨 */
 const APPROVAL_LABEL = /결\s*재\s*일|결의\s*일|승인\s*일/
 
-/** 공백이 섞여 있어도 'YYYY년 M월 D일' 하나만 있는 줄이면 날짜로 읽는다 */
+/**
+ * 공백이 섞여 있어도 'YYYY년 M월 D일' 하나만 있는 줄이면 날짜로 읽는다.
+ * OCR 이 '월' 을 엉뚱한 글자로 읽는 일이 있어, 숫자 사이의 구분자는 몇 글자까지 너그럽게 본다.
+ */
 const dateOfLine = (line: string) => {
-  const m = line.match(/^\s*(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?\s*$/)
-  return m ? `${m[1]}-${pad(Number(m[2]))}-${pad(Number(m[3]))}` : null
+  const m = line.match(/^\W*(\d{4})\s*\D{1,4}\s*(\d{1,2})\s*\D{1,4}\s*(\d{1,2})\s*\D{0,2}\W*$/)
+  if (!m) return null
+  const mm = Number(m[2])
+  const dd = Number(m[3])
+  return mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 ? `${m[1]}-${pad(mm)}-${pad(dd)}` : null
 }
 
 /**
