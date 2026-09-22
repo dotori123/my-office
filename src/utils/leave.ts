@@ -28,9 +28,13 @@ export interface Recommendation {
   reason: string
 }
 
+export type RecommendSort = 'efficiency' | 'length'
+
 export interface RecommendOptions {
   /** 사용할 연차 일수. 'max'는 잔여 연차 내에서 가장 긴 휴식 */
   useDays: number | 'max'
+  /** 정렬 기준. efficiency 는 연차 하루당 휴식일이 많은 순, length 는 연속 휴식이 긴 순 (기본 efficiency) */
+  sortBy?: RecommendSort
   exclude?: { from: string; to: string }
   remaining: number
   from?: string
@@ -110,13 +114,12 @@ export const recommendLeaves = (leaves: Leave[], events: CalendarEvent[], opts: 
     }
   }
 
-  // 효율(휴식일/연차) → 휴식 길이 → 빠른 날짜 순
-  return results
-    .sort(
-      (a, b) =>
-        b.restDays / b.useDays - a.restDays / a.useDays ||
-        b.restDays - a.restDays ||
-        a.dates[0].localeCompare(b.dates[0]),
-    )
-    .slice(0, 10)
+  // 효율순: 효율(휴식일/연차) → 휴식 길이 → 빠른 날짜
+  // 길이순: 휴식 길이 → 연차 적게 쓰는 쪽 → 빠른 날짜
+  const byEfficiency = (a: Recommendation, b: Recommendation) =>
+    b.restDays / b.useDays - a.restDays / a.useDays || b.restDays - a.restDays || a.dates[0].localeCompare(b.dates[0])
+  const byLength = (a: Recommendation, b: Recommendation) =>
+    b.restDays - a.restDays || a.useDays - b.useDays || a.dates[0].localeCompare(b.dates[0])
+
+  return results.sort(opts.sortBy === 'length' ? byLength : byEfficiency).slice(0, 10)
 }
