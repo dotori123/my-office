@@ -7,14 +7,16 @@ export function Band({
   children,
   className,
   inner,
+  id,
 }: {
   tone?: 'white' | 'gray'
   children: ReactNode
   className?: string
   inner?: string
+  id?: string
 }) {
   return (
-    <section className={cx(tone === 'gray' ? 'bg-canvas' : 'bg-paper', className)}>
+    <section id={id} className={cx(tone === 'gray' ? 'bg-canvas' : 'bg-paper', className)}>
       <div className={cx('mx-auto max-w-[1200px] px-5 py-12 md:px-10 md:py-16', inner)}>{children}</div>
     </section>
   )

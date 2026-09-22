@@ -1,4 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { cx } from '@/components/ui'
+import CountUp from './CountUp'
+import { useInView } from './useInView'
 
 /**
  * 소개 페이지용 화면 미리보기.
@@ -146,6 +149,8 @@ export function RecommendStrip() {
  * 대시보드 목업과 같은 숫자(총 300,000원 중 291,000원 사용)를 쓴다.
  */
 export function BenefitBreakdown() {
+  const ref = useRef<HTMLDivElement>(null)
+  const on = useInView(ref)
   const total = 300000
   const parts = [
     { label: '도서', amount: 66000, color: 'bg-starlight' },
@@ -153,33 +158,53 @@ export function BenefitBreakdown() {
     { label: '소프트웨어', amount: 105000, color: 'bg-silver' },
   ]
   const used = parts.reduce((s, p) => s + p.amount, 0)
-  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`
+  const won = (n: number) => `${Math.round(n).toLocaleString('ko-KR')}원`
+  // 막대 세 토막이 차례로 차오른 뒤 (0.25초 간격) 잔액이 내려온다
+  const STEP = 0.25
+  const remainingDelay = parts.length * STEP
 
   return (
-    <div>
+    <div ref={ref}>
       <div className="flex items-end justify-between">
         <div>
           <p className="text-caption text-mid">남은 지원비</p>
-          <p className="mt-1 text-heading-sm font-bold tabular-nums md:text-heading">{won(total - used)}</p>
+          <p className="mt-1 text-heading-sm font-bold tabular-nums md:text-heading">
+            <CountUp to={total - used} format={won} delay={remainingDelay} />
+          </p>
         </div>
         <p className="text-body-sm text-mid">총 {won(total)}</p>
       </div>
 
       <div className="mt-6 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-paper">
-        {parts.map((p) => (
-          <div key={p.label} className={cx('h-full', p.color)} style={{ width: `${(p.amount / total) * 100}%` }} />
+        {parts.map((p, i) => (
+          <div
+            key={p.label}
+            className={cx('h-full transition-[width] duration-700 ease-out', p.color)}
+            style={{ width: on ? `${(p.amount / total) * 100}%` : 0, transitionDelay: `${i * STEP}s` }}
+          />
         ))}
       </div>
-      <p className="mt-2 text-right text-micro text-mid">사용률 {Math.round((used / total) * 100)}%</p>
+      <p
+        className="mt-2 text-right text-micro text-mid transition-opacity duration-500"
+        style={{ opacity: on ? 1 : 0, transitionDelay: `${remainingDelay}s` }}
+      >
+        사용률 {Math.round((used / total) * 100)}%
+      </p>
 
       <ul className="mt-5 grid grid-cols-3 gap-3">
-        {parts.map((p) => (
-          <li key={p.label} className="rounded-[16px] bg-paper p-4">
+        {parts.map((p, i) => (
+          <li
+            key={p.label}
+            className="rounded-[16px] bg-paper p-4 transition-[opacity,transform] duration-500 ease-out"
+            style={{ opacity: on ? 1 : 0, transform: on ? 'none' : 'translateY(8px)', transitionDelay: `${i * STEP}s` }}
+          >
             <p className="flex items-center gap-1.5 text-caption text-mid">
               <span className={cx('size-2 rounded-full', p.color)} />
               {p.label}
             </p>
-            <p className="mt-1 text-body-sm font-medium tabular-nums">{won(p.amount)}</p>
+            <p className="mt-1 text-body-sm font-medium tabular-nums">
+              <CountUp to={p.amount} format={won} delay={i * STEP} />
+            </p>
           </li>
         ))}
       </ul>
@@ -187,8 +212,16 @@ export function BenefitBreakdown() {
   )
 }
 
-/** 지원비 최근 사용 — 합산 건이 펼쳐진 모습 */
+/** 지원비 최근 사용 — 합산 건이 화면에 들어오고 잠시 뒤 펼쳐진다 */
 export function BenefitRecent() {
+  const ref = useRef<HTMLUListElement>(null)
+  const on = useInView(ref)
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!on) return
+    const t = setTimeout(() => setOpen(true), 700)
+    return () => clearTimeout(t)
+  }, [on])
   const rows: { date: string; name: string; cat: string; amount: string; parts?: [string, string][] }[] = [
     {
       date: '09.17',
@@ -205,7 +238,7 @@ export function BenefitRecent() {
     { date: '09.02', name: 'IntelliJ 연간 구독', cat: '소프트웨어', amount: '45,000원' },
   ]
   return (
-    <ul className="space-y-2">
+    <ul ref={ref} className="space-y-2">
       {rows.map((r) => (
         <li key={r.date + r.name} className="rounded-[16px] bg-paper px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -217,7 +250,17 @@ export function BenefitRecent() {
               {r.parts && (
                 <p className="flex items-center gap-1 text-caption text-mid">
                   {r.parts.length}건 합산
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="rotate-180">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={cx('transition-transform duration-300', open && 'rotate-180')}
+                  >
                     <path d="M3 4.5l3 3 3-3" />
                   </svg>
                 </p>
@@ -226,14 +269,23 @@ export function BenefitRecent() {
             <span className="shrink-0 text-body-sm font-medium tabular-nums">{r.amount}</span>
           </div>
           {r.parts && (
-            <ul className="mt-2 space-y-1 border-l border-hairline pl-3 text-micro text-mid">
-              {r.parts.map(([d, a]) => (
-                <li key={d} className="flex justify-between tabular-nums">
-                  <span>{d} · Claude Pro 1개월 구독</span>
-                  <span>{a}</span>
-                </li>
-              ))}
-            </ul>
+            // grid-rows 0fr → 1fr 로 높이를 자연스럽게 펼친다
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-500 ease-out"
+              style={{ gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0 }}
+            >
+              <ul className="min-h-0 overflow-hidden">
+                {r.parts.map(([d, a], i) => (
+                  <li
+                    key={d}
+                    className={cx('flex justify-between border-l border-hairline pl-3 text-micro tabular-nums text-mid', i === 0 && 'mt-2')}
+                  >
+                    <span>{d} · Claude Pro 1개월 구독</span>
+                    <span>{a}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </li>
       ))}

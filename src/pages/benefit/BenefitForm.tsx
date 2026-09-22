@@ -83,7 +83,7 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
         <Field label="메모">
           <Input placeholder="선택" value={memo} onChange={(e) => setMemo(e.target.value)} />
         </Field>
-        <Field label="증빙자료" hint="프론트 단계에서는 파일명만 저장됩니다.">
+        {/*<Field label="증빙자료" hint="프론트 단계에서는 파일명만 저장됩니다.">
           <input
             type="file"
             accept="image/*,.pdf"
@@ -91,7 +91,7 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
             className="block w-full text-caption text-mid file:mr-3 file:rounded-pill file:border-0 file:bg-wash file:px-4 file:py-1.5 file:text-caption file:text-ink hover:file:bg-hairline"
           />
           {receipt && <span className="mt-1.5 block text-micro text-mid">첨부: {receipt}</span>}
-        </Field>
+        </Field>*/}
         <div className="flex gap-2 pt-2">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             취소

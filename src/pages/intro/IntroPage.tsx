@@ -5,6 +5,7 @@ import { useSeo } from '@/hooks/useSeo'
 import CalendarGrid from './CalendarGrid'
 import CountUp from './CountUp'
 import Reveal from './Reveal'
+import SectionNav from './SectionNav'
 import { BenefitBreakdown, BenefitMock, BenefitRecent, CalendarMock, DashboardMock, LeaveMock, ProjectMock, RecommendStrip } from './Mocks'
 import { ramp, useStageProgress } from './useStageProgress'
 
@@ -141,8 +142,10 @@ export default function IntroPage() {
 
   return (
     <main className="min-h-dvh bg-paper text-ink">
+      <SectionNav />
+
       {/* 1 — 스크롤 스테이지. 3D 격자가 붙어 있는 동안 문구가 바뀐다 */}
-      <section ref={stageRef} className="relative h-[250vh]">
+      <section id="hero" ref={stageRef} className="relative h-[250vh]">
         <div className="sticky top-0 h-dvh overflow-hidden">
           <CalendarGrid className="absolute inset-0 h-full w-full" progressRef={progress} />
           <div
@@ -186,7 +189,7 @@ export default function IntroPage() {
       </section>
 
       {/* 2 — 추천 결과 */}
-      <Band tone="gray" inner="py-20 md:py-28">
+      <Band id="recommend" tone="gray" inner="py-20 md:py-28">
         <Reveal>
           <p className="text-center text-caption text-mid">RECOMMENDATION</p>
           <div className="mx-auto mt-8 max-w-[720px]">
@@ -230,7 +233,7 @@ export default function IntroPage() {
       </Band>
 
       {/* 2-1 — 지원비 */}
-      <Band inner="py-20 md:py-28">
+      <Band id="benefit" inner="py-20 md:py-28">
         <Reveal>
           <div className="mx-auto max-w-[560px] text-center">
             <p className="text-caption text-mid">BENEFIT</p>
@@ -255,7 +258,7 @@ export default function IntroPage() {
       </Band>
 
       {/* 3 — 검정 밴드. 긴 스크롤에 리듬을 준다 */}
-      <section className="overflow-hidden bg-ink py-28 text-paper md:py-40">
+      <section id="why" className="overflow-hidden bg-ink py-28 text-paper md:py-40">
         <div className="mx-auto max-w-[1200px] px-5 md:px-10">
           <Reveal>
             <p className="text-caption text-paper/50">WHY</p>
@@ -280,7 +283,7 @@ export default function IntroPage() {
       </section>
 
       {/* 4 — 기능. 왼쪽 제목은 붙어 있고 오른쪽만 흐른다 */}
-      <Band inner="py-20 md:py-32">
+      <Band id="features" inner="py-20 md:py-32">
         <div className="md:grid md:grid-cols-[0.8fr_1.2fr] md:gap-16">
           <div className="md:sticky md:top-24 md:h-fit">
             <Reveal>
@@ -312,7 +315,7 @@ export default function IntroPage() {
       </Band>
 
       {/* 5 — 대시보드 미리보기 */}
-      <Band tone="gray" inner="py-20 md:py-28">
+      <Band id="dashboard" tone="gray" inner="py-20 md:py-28">
         <Reveal>
           <div className="mx-auto max-w-[560px] text-center">
             <p className="text-caption text-mid">DASHBOARD</p>
@@ -330,13 +333,11 @@ export default function IntroPage() {
       </Band>
 
       {/* 6 — 가져오기 3단계 */}
-      <Band inner="py-20 md:py-32">
+      <Band id="import" inner="py-20 md:py-32">
         <Reveal>
           <p className="text-caption text-mid">IMPORT</p>
-          <h2 className="mt-3 max-w-[620px] text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
-            근태 시스템의 표도, 지출결의서도
-            <br />
-            그대로 붙여넣으세요.
+          <h2 className="mt-3 max-w-[820px] text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
+            근태 시스템의 표도, 지출결의서도 그대로 붙여넣으세요.
           </h2>
         </Reveal>
 
@@ -414,7 +415,7 @@ Claude Pro 1개월 구독
       </Band>
 
       {/* 7 — 데이터 */}
-      <Band tone="gray" inner="py-20 md:py-32">
+      <Band id="privacy" tone="gray" inner="py-20 md:py-32">
         <div className="md:grid md:grid-cols-2 md:gap-16">
           <Reveal>
             <p className="text-caption text-mid">PRIVACY</p>
@@ -438,7 +439,7 @@ Claude Pro 1개월 구독
       </Band>
 
       {/* 8 — FAQ */}
-      <Band inner="py-20 md:py-32">
+      <Band id="faq" inner="py-20 md:py-32">
         <div className="md:grid md:grid-cols-2 md:gap-16">
           <Reveal>
             <p className="text-caption text-mid">FAQ</p>
@@ -462,7 +463,7 @@ Claude Pro 1개월 구독
       </Band>
 
       {/* 9 — 마무리 */}
-      <section className="overflow-hidden py-28 md:py-40">
+      <section id="end" className="overflow-hidden py-28 md:py-40">
         <Reveal>
           <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 text-center md:px-10">
             <h2 className="text-heading-sm font-bold tracking-[-0.4px] md:text-heading-lg">

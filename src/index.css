@@ -77,6 +77,9 @@ html {
 
 body {
   @apply bg-paper text-ink text-body-sm;
+  /* 한국어 단어가 중간에서 끊기지 않게. 너무 긴 URL 같은 건 넘치지 않도록만 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 클릭 가능한 요소는 모두 pointer (Tailwind v4 preflight 는 button 을 default 로 둠) */
