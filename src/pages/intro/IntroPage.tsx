@@ -13,36 +13,49 @@ import { ramp, useStageProgress } from './useStageProgress'
  *
  * 첫 화면은 스크롤 스테이지다 — 캔버스를 sticky 로 붙여두고
  * 스크롤 진행도에 따라 3D 격자와 문구가 차례로 바뀐다.
+ * 이후 섹션은 흰색·회색·검정을 번갈아 두어 긴 스크롤에 리듬을 준다.
  */
 
 const FEATURES = [
   {
-    label: 'Leave',
+    en: 'LEAVE.',
     title: '연차',
     body: '총 연차·사용·예정·잔여를 한 화면에서. 반차·반반차까지 0.25일 단위로 계산하고, 기간 연차는 주말과 공휴일을 빼고 차감합니다.',
     mock: <LeaveMock />,
   },
   {
-    label: 'Benefit',
+    en: 'BENEFIT.',
     title: '지원비',
     body: '도서·교육·소프트웨어를 통합 지원비로 관리해요. 월별 사용액과 카테고리별 비중을 보여주고, 잔액을 자동으로 계산합니다.',
     mock: <BenefitMock />,
   },
   {
-    label: 'Calendar',
+    en: 'CALENDAR.',
     title: '캘린더',
     body: '공휴일·연차·회사 일정·개인 일정을 한 달력에. 회사 휴무일을 등록하면 연차 계산과 추천에 함께 반영됩니다.',
     mock: <CalendarMock />,
   },
   {
-    label: 'Projects',
+    en: 'PROJECTS.',
     title: '프로젝트 바로가기',
     body: '테스트·운영 서버, WBS, 저장소, 디자인 링크를 프로젝트별로 모아둡니다. 자주 쓰는 프로젝트는 대시보드에 고정할 수 있어요.',
     mock: <ProjectMock />,
   },
 ]
 
-const ctaClass = 'rounded-pill bg-blue px-6 py-[13px] text-body-sm text-paper transition-colors hover:bg-blue-hover'
+const STEPS = [
+  { no: '01', title: '복사', body: '근태관리 › 내 출근부 › 휴가세부내역 에서 표를 드래그해 복사합니다.' },
+  { no: '02', title: '붙여넣기', body: '연차 페이지의 가져오기 창에 그대로 붙여넣으면 날짜·유형·일수를 알아서 읽습니다.' },
+  { no: '03', title: '확인', body: '가져오기 전에 인식 결과를 미리 보여줍니다. 이미 등록된 건은 자동으로 제외돼요.' },
+]
+
+const PRIVACY = [
+  ['서버에 저장하지 않습니다', '입력한 연차와 지원비는 이 브라우저 안에만 남고 어디로도 전송되지 않아요.'],
+  ['민감정보는 다루지 않습니다', '급여·평가·계좌 같은 정보는 처음부터 서비스 범위에서 제외했습니다.'],
+  ['로그인이 없습니다', '계정을 만들 필요 없이 열어서 바로 쓰면 됩니다.'],
+]
+
+const ctaClass = 'rounded-pill bg-blue px-7 py-[15px] text-body-sm text-paper transition-colors hover:bg-blue-hover'
 
 export default function IntroPage() {
   const stageRef = useRef<HTMLElement>(null)
@@ -52,6 +65,8 @@ export default function IntroPage() {
   const introCopyRef = useRef<HTMLDivElement>(null)
   const recommendCopyRef = useRef<HTMLDivElement>(null)
   const hintRef = useRef<HTMLDivElement>(null)
+  // 워드마크는 스크롤에 따라 가로로 천천히 흐른다
+  const wordmarkRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let raf = 0
@@ -70,6 +85,12 @@ export default function IntroPage() {
         recommendCopyRef.current.style.transform = `translateY(${(1 - inn) * 40}px)`
       }
       if (hintRef.current) hintRef.current.style.opacity = String(1 - ramp(p, 0, 0.08))
+
+      if (wordmarkRef.current) {
+        const r = wordmarkRef.current.getBoundingClientRect()
+        const seen = 1 - Math.max(0, Math.min(1, (r.top + r.height) / (window.innerHeight + r.height)))
+        wordmarkRef.current.style.transform = `translateX(${(0.5 - seen) * 14}%)`
+      }
     }
     tick()
     return () => cancelAnimationFrame(raf)
@@ -77,11 +98,10 @@ export default function IntroPage() {
 
   return (
     <div className="min-h-dvh bg-paper text-ink">
-      {/* 스크롤 스테이지 — 3D 격자가 붙어 있는 동안 문구가 바뀐다 */}
+      {/* 1 — 스크롤 스테이지. 3D 격자가 붙어 있는 동안 문구가 바뀐다 */}
       <section ref={stageRef} className="relative h-[250vh]">
         <div className="sticky top-0 h-dvh overflow-hidden">
           <CalendarGrid className="absolute inset-0 h-full w-full" progressRef={progress} />
-          {/* 문구가 올라앉을 자리 — 격자가 흰 배경으로 스며들게 한다 */}
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%]"
             style={{
@@ -89,11 +109,7 @@ export default function IntroPage() {
             }}
           />
 
-          {/* 1장 — 첫인사 */}
-          <div
-            ref={introCopyRef}
-            className="absolute inset-x-0 bottom-[9vh] flex flex-col items-center px-5 text-center md:bottom-[11vh]"
-          >
+          <div ref={introCopyRef} className="absolute inset-x-0 bottom-[9vh] flex flex-col items-center px-5 text-center md:bottom-[11vh]">
             <p className="text-body-sm text-mid">MY OFFICE</p>
             <h1 className="mt-3 text-[40px] font-bold leading-[1.05] tracking-[-1.2px] md:text-heading-lg">
               회사생활, 이것저것
@@ -105,7 +121,6 @@ export default function IntroPage() {
             </p>
           </div>
 
-          {/* 2장 — 연차 추천 */}
           <div
             ref={recommendCopyRef}
             className="absolute inset-x-0 bottom-[9vh] flex flex-col items-center px-5 text-center opacity-0 md:bottom-[11vh]"
@@ -121,17 +136,17 @@ export default function IntroPage() {
             </p>
           </div>
 
-          {/* 스크롤 안내 */}
           <div ref={hintRef} className="absolute inset-x-0 bottom-6 flex justify-center">
             <span className="text-micro text-mid">스크롤</span>
           </div>
         </div>
       </section>
 
-      {/* 추천 결과 예시 */}
-      <Band tone="gray">
+      {/* 2 — 추천 결과 */}
+      <Band tone="gray" inner="py-20 md:py-28">
         <Reveal>
-          <div className="mx-auto max-w-[720px]">
+          <p className="text-center text-caption text-mid">RECOMMENDATION</p>
+          <div className="mx-auto mt-8 max-w-[720px]">
             <Card>
               <p className="text-micro font-medium text-ember">추천</p>
               <p className="mt-2 text-subheading font-semibold md:text-heading-sm">9월 23일 (수)에 연차를 사용하면</p>
@@ -152,8 +167,7 @@ export default function IntroPage() {
           </div>
         </Reveal>
 
-        {/* 숫자 */}
-        <div className="mx-auto mt-10 grid max-w-[720px] grid-cols-3 gap-5 text-center">
+        <div className="mx-auto mt-12 grid max-w-[720px] grid-cols-3 gap-5 text-center">
           {[
             { to: 1, suffix: '일', label: '사용한 연차' },
             { to: 7, suffix: '일', label: '연속 휴식' },
@@ -169,67 +183,117 @@ export default function IntroPage() {
         </div>
       </Band>
 
-      {/* 기능 */}
-      <Band>
-        <Reveal>
-          <h2 className="text-body-lg font-semibold tracking-[0.007em]">한 곳에 모아서.</h2>
-        </Reveal>
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={(i % 2) * 0.1}>
-              <Card tone="gray" eyebrow={f.label} title={f.title} className="h-full">
-                <p className="text-body-sm text-mid">{f.body}</p>
-                <div className="mt-5">{f.mock}</div>
-              </Card>
+      {/* 3 — 검정 밴드. 긴 스크롤에 리듬을 준다 */}
+      <section className="overflow-hidden bg-ink py-28 text-paper md:py-40">
+        <div className="mx-auto max-w-[1200px] px-5 md:px-10">
+          <Reveal>
+            <p className="text-caption text-paper/50">WHY</p>
+            <h2 className="mt-6 max-w-[820px] text-[30px] font-bold leading-[1.3] tracking-[-0.5px] md:text-heading-sm">
+              연차는 근태 시스템에, 지원비는 영수증에, 일정은 캘린더에.
+              <br />
+              <span className="text-paper/50">흩어져 있으니 매번 찾아야 했습니다.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="mt-10 max-w-[520px] text-body-sm text-paper/60">
+              MY OFFICE는 기존 시스템을 대체하지 않아요. 각자 자리에 있는 정보 중에서 내가 자주 확인하는 것만 모아 개인 관점으로 보여줍니다.
+            </p>
+          </Reveal>
+        </div>
+
+        <div ref={wordmarkRef} className="mt-20 whitespace-nowrap will-change-transform md:mt-28">
+          <span className="text-[clamp(64px,15vw,220px)] font-bold leading-none tracking-[-0.05em] text-paper/10">
+            MY OFFICE · MY OFFICE ·
+          </span>
+        </div>
+      </section>
+
+      {/* 4 — 기능. 왼쪽 제목은 붙어 있고 오른쪽만 흐른다 */}
+      <Band inner="py-20 md:py-32">
+        <div className="md:grid md:grid-cols-[0.8fr_1.2fr] md:gap-16">
+          <div className="md:sticky md:top-24 md:h-fit">
+            <Reveal>
+              <p className="text-caption text-mid">FEATURES</p>
+              <h2 className="mt-3 text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
+                한 곳에
+                <br />
+                모아서.
+              </h2>
+              <p className="mt-5 max-w-[320px] text-body-sm text-mid">
+                네 가지 화면이 서로 연결돼 있습니다. 회사 휴무일을 등록하면 연차 계산과 추천이 함께 바뀌는 식으로요.
+              </p>
             </Reveal>
-          ))}
+          </div>
+
+          <div className="mt-12 space-y-5 md:mt-0">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.title} delay={i * 0.05}>
+                <Card tone="gray">
+                  <p className="text-caption text-mid">{f.en}</p>
+                  <p className="mt-1 text-subheading font-semibold">{f.title}</p>
+                  <p className="mt-3 text-body-sm text-mid">{f.body}</p>
+                  <div className="mt-6">{f.mock}</div>
+                </Card>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </Band>
 
-      {/* 대시보드 미리보기 */}
-      <Band tone="gray">
+      {/* 5 — 대시보드 미리보기 */}
+      <Band tone="gray" inner="py-20 md:py-28">
         <Reveal>
           <div className="mx-auto max-w-[560px] text-center">
-            <h2 className="text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">
-              열자마자 보이는 화면.
-            </h2>
+            <p className="text-caption text-mid">DASHBOARD</p>
+            <h2 className="mt-3 text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">열자마자 보이는 화면.</h2>
             <p className="mt-4 text-body-sm text-mid">
               다음 휴가까지 며칠 남았는지가 가장 먼저 보이고, 그 아래에 연차와 지원비 잔액이 이어집니다.
             </p>
           </div>
         </Reveal>
         <Reveal delay={0.1}>
-          <div className="mx-auto mt-10 max-w-[720px]">
+          <div className="mx-auto mt-12 max-w-[720px]">
             <DashboardMock />
           </div>
         </Reveal>
       </Band>
 
-      {/* 가져오기 */}
-      <Band>
-        <div className="grid items-center gap-10 md:grid-cols-2">
-          <Reveal>
-            <p className="text-caption text-mid">붙여넣기로 가져오기</p>
-            <h2 className="mt-2 text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">
-              근태 시스템의 표를
-              <br />
-              그대로 붙여넣으세요.
-            </h2>
-            <p className="mt-4 max-w-[460px] text-body-sm text-mid">
-              휴가 사용내역을 복사해 붙여넣으면 날짜·유형·일수를 알아서 읽습니다. 이미 등록된 건은 자동으로 걸러내고, 가져오기 전에 미리보기로
-              확인할 수 있어요.
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <Card className="font-mono">
+      {/* 6 — 가져오기 3단계 */}
+      <Band inner="py-20 md:py-32">
+        <Reveal>
+          <p className="text-caption text-mid">IMPORT</p>
+          <h2 className="mt-3 max-w-[620px] text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
+            근태 시스템의 표를
+            <br />
+            그대로 붙여넣으세요.
+          </h2>
+        </Reveal>
+
+        <div className="mt-14 grid gap-10 md:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <Reveal key={s.no} delay={i * 0.1}>
+              <div className="border-t border-hairline pt-5">
+                <p className="text-caption text-mid tabular-nums">{s.no}</p>
+                <p className="mt-2 text-body font-semibold">{s.title}</p>
+                <p className="mt-3 text-body-sm text-mid">{s.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        <Reveal delay={0.1}>
+          <div className="mt-14 grid gap-5 md:grid-cols-2">
+            <Card tone="gray">
               <p className="text-micro text-mid">붙여넣은 내용</p>
-              <pre className="mt-3 overflow-x-auto text-[11px] leading-relaxed text-deep">
+              <pre className="mt-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-deep">
                 {`2026-09-18  연차  연차  사용  -1
 2026-09-07  연차  반차  사용  -0.5
 2026-04-06  연차  연차  사용  -2`}
               </pre>
-              <p className="mt-4 text-micro text-mid">인식 결과</p>
-              <ul className="mt-2 space-y-1.5 text-caption">
+            </Card>
+            <Card tone="gray">
+              <p className="text-micro text-mid">인식 결과</p>
+              <ul className="mt-3 space-y-2 text-caption">
                 {[
                   ['10.02', '연차', '−1일'],
                   ['09.07', '반차', '−0.5일'],
@@ -243,35 +307,54 @@ export default function IntroPage() {
                 ))}
               </ul>
             </Card>
+          </div>
+        </Reveal>
+      </Band>
+
+      {/* 7 — 데이터 */}
+      <Band tone="gray" inner="py-20 md:py-32">
+        <div className="md:grid md:grid-cols-2 md:gap-16">
+          <Reveal>
+            <p className="text-caption text-mid">PRIVACY</p>
+            <h2 className="mt-3 text-heading-sm font-bold tracking-[-0.4px] md:text-heading">
+              내 데이터는
+              <br />
+              내 브라우저에만.
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="mt-8 space-y-6 md:mt-2">
+              {PRIVACY.map(([title, body]) => (
+                <div key={title} className="border-t border-hairline pt-5">
+                  <p className="text-body-sm font-medium">{title}</p>
+                  <p className="mt-2 text-body-sm text-mid">{body}</p>
+                </div>
+              ))}
+            </div>
           </Reveal>
         </div>
       </Band>
 
-      {/* 데이터 */}
-      <Band tone="gray">
+      {/* 8 — 마무리 */}
+      <section className="overflow-hidden py-28 md:py-40">
         <Reveal>
-          <div className="mx-auto max-w-[620px] text-center">
-            <h2 className="text-subheading font-semibold tracking-[0.007em] md:text-heading-sm">내 데이터는 내 브라우저에만.</h2>
-            <p className="mt-4 text-body-sm text-mid">
-              서버에 저장하지 않습니다. 입력한 연차와 지원비는 이 브라우저 안에만 남고 어디로도 전송되지 않아요. 급여·평가 같은 민감정보는 처음부터
-              다루지 않습니다.
-            </p>
-          </div>
-        </Reveal>
-      </Band>
-
-      {/* 마무리 */}
-      <Band inner="py-24 md:py-32">
-        <Reveal>
-          <div className="flex flex-col items-center text-center">
-            <h2 className="text-heading-sm font-bold tracking-[-0.4px] md:text-heading">오늘 뭘 알아야 하는지, 열자마자.</h2>
-            <Link to="/" className={`mt-8 ${ctaClass}`}>
+          <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 text-center md:px-10">
+            <h2 className="text-heading-sm font-bold tracking-[-0.4px] md:text-heading-lg">
+              오늘 뭘 알아야 하는지,
+              <br />
+              열자마자.
+            </h2>
+            <Link to="/" className={`mt-10 ${ctaClass}`}>
               시작하기
             </Link>
-            <p className="mt-10 text-micro text-mid">MY OFFICE — 나의 회사생활 정보</p>
           </div>
         </Reveal>
-      </Band>
+
+        <div className="mt-24 flex justify-center px-5 md:mt-32">
+          <span className="text-[clamp(48px,12vw,180px)] font-bold leading-none tracking-[-0.05em] text-wash">MY OFFICE</span>
+        </div>
+        <p className="mt-16 text-center text-micro text-mid">MY OFFICE — 나의 회사생활 정보</p>
+      </section>
     </div>
   )
 }
