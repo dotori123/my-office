@@ -3,7 +3,7 @@ import { useApp } from '@/store/AppContext'
 import { Button, Card, EmptyState, Field, Input, cx } from '@/components/ui'
 import { addDays, fmtKo, fmtShort, today, weekdayKo } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
-import { recommendLeaves, type RecommendSort } from '@/utils/leave'
+import { recommendLeaves } from '@/utils/leave'
 
 const USE_OPTIONS = [
   { key: 1, label: '연차 1일' },
@@ -12,36 +12,9 @@ const USE_OPTIONS = [
   { key: 'max', label: '가장 긴 휴식' },
 ] as const
 
-const SORT_OPTIONS: { key: RecommendSort; label: string; hint: string }[] = [
-  { key: 'efficiency', label: '효율순', hint: '연차 하루당 쉬는 날이 많은 순' },
-  { key: 'length', label: '길이순', hint: '연속으로 쉬는 날이 긴 순' },
-]
-
-/** 조건 카드의 알약 버튼 묶음 */
-function Pills<K extends string | number>({ options, value, onChange }: { options: readonly { key: K; label: string }[]; value: K; onChange: (k: K) => void }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          onClick={() => onChange(o.key)}
-          className={cx(
-            'rounded-pill px-4 py-2 text-caption transition-colors',
-            value === o.key ? 'bg-ink text-paper' : 'bg-wash text-deep hover:bg-hairline',
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 export default function LeaveRecommend({ remaining, onApply }: { remaining: number; onApply: (start: string, end: string) => void }) {
   const { state } = useApp()
   const [useDays, setUseDays] = useState<number | 'max'>(1)
-  const [sortBy, setSortBy] = useState<RecommendSort>('efficiency')
   const [from, setFrom] = useState(addDays(today(), 1))
   const [to, setTo] = useState(`${today().slice(0, 4)}-12-31`)
   const [excludeOn, setExcludeOn] = useState(false)
@@ -52,13 +25,12 @@ export default function LeaveRecommend({ remaining, onApply }: { remaining: numb
     () =>
       recommendLeaves(state.leaves, state.events, {
         useDays,
-        sortBy,
         remaining,
         from,
         to,
         exclude: excludeOn && exFrom && exTo ? { from: exFrom, to: exTo } : undefined,
       }),
-    [state.leaves, state.events, useDays, sortBy, remaining, from, to, excludeOn, exFrom, exTo],
+    [state.leaves, state.events, useDays, remaining, from, to, excludeOn, exFrom, exTo],
   )
 
   const best = results[0]
@@ -69,11 +41,21 @@ export default function LeaveRecommend({ remaining, onApply }: { remaining: numb
       <Card className="md:col-span-2" title="추천 조건">
         <div className="space-y-5">
           <Field label="사용할 연차">
-            <Pills options={USE_OPTIONS} value={useDays} onChange={setUseDays} />
-          </Field>
-
-          <Field label="정렬" hint={SORT_OPTIONS.find((o) => o.key === sortBy)?.hint}>
-            <Pills options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
+            <div className="flex flex-wrap gap-2">
+              {USE_OPTIONS.map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => setUseDays(o.key)}
+                  className={cx(
+                    'rounded-pill px-4 py-2 text-caption transition-colors',
+                    useDays === o.key ? 'bg-ink text-paper' : 'bg-wash text-deep hover:bg-hairline',
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
