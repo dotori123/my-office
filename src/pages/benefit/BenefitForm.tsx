@@ -3,6 +3,8 @@ import { BENEFIT_CATEGORIES, type Benefit, type BenefitCategory } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Button, Field, Input, Modal, MoneyInput, Select } from '@/components/ui'
 import { today } from '@/utils/date'
+import { booksInMonth } from '@/utils/benefit'
+import { BOOKS_PER_MONTH } from '@/data/benefitRules'
 
 interface Props {
   open: boolean
@@ -11,7 +13,7 @@ interface Props {
 }
 
 export default function BenefitForm({ open, onClose, initial }: Props) {
-  const { dispatch } = useApp()
+  const { state, dispatch } = useApp()
   const [date, setDate] = useState(today())
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -31,6 +33,18 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
     setCustomCategory(initial && !preset ? initial.category : '')
     setMemo(initial?.memo ?? '')
   }, [open, initial])
+
+  // 도서는 월 3권 — 수정 중인 건은 빼고 센다
+  const booksInThisMonth = booksInMonth(
+    state.benefits.filter((b) => b.id !== initial?.id),
+    date.slice(0, 7),
+  )
+  const bookHint =
+    category === '도서'
+      ? booksInThisMonth >= BOOKS_PER_MONTH
+        ? `이 달에 이미 ${booksInThisMonth}권을 신청했어요. 월 ${BOOKS_PER_MONTH}권까지예요.`
+        : `이 달 도서 ${booksInThisMonth}권 신청 · 월 ${BOOKS_PER_MONTH}권까지`
+      : undefined
 
   const submit = () => {
     const payload = {
@@ -52,7 +66,7 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
           <Field label="사용일">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="카테고리">
+          <Field label="카테고리" hint={bookHint}>
             <Select value={category} onChange={(e) => setCategory(e.target.value)}>
               {BENEFIT_CATEGORIES.map((c) => (
                 <option key={c} value={c}>

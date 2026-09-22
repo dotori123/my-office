@@ -19,6 +19,7 @@ const CATEGORY_STYLE: Record<string, string> = {
   도서: 'bg-starlight',
   교육: 'bg-sky',
   소프트웨어: 'bg-silver',
+  자격증: 'bg-blush',
   기타: 'bg-wash',
 }
 const catStyle = (c: string) => CATEGORY_STYLE[c] ?? 'bg-wash'

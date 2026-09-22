@@ -32,7 +32,7 @@ export interface Leave {
 }
 
 /** 기본 제공 카테고리. 사용자가 직접 입력한 값도 쓸 수 있어 타입은 열어둔다 */
-export const BENEFIT_CATEGORIES = ['도서', '교육', '소프트웨어', '기타'] as const
+export const BENEFIT_CATEGORIES = ['도서', '교육', '소프트웨어', '자격증', '기타'] as const
 export type BenefitCategory = string
 
 /** 여러 건을 하나로 합쳤을 때 남겨 두는 원본 한 건 */

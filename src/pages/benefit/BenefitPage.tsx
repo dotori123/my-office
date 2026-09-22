@@ -22,6 +22,7 @@ const CATEGORY_STYLE: Record<string, string> = {
   도서: 'bg-starlight',
   교육: 'bg-sky',
   소프트웨어: 'bg-silver',
+  자격증: 'bg-blush',
   기타: 'bg-wash',
 }
 const catStyle = (c: string) => CATEGORY_STYLE[c] ?? 'bg-wash'
@@ -121,6 +122,30 @@ function StatusTab({ summary, benefits }: { summary: ReturnType<typeof summarize
           <Stat label="잔액" value={fmtWon(summary.remaining)} />
         </div>
         {over && <p className="mt-4 text-caption font-medium text-ember">지원금을 초과했어요.</p>}
+
+        {/* 도서는 연 20만원 소한도 · 월 3권 */}
+        <div className="mt-6 rounded-[16px] bg-canvas px-4 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+            <p className="text-caption text-mid">
+              도서 한도 <span className="text-ink">{fmtWon(summary.book.used)}</span> / {fmtWon(summary.book.limit)}
+            </p>
+            <p className={cx('text-caption', summary.book.thisMonth > summary.book.perMonth ? 'font-medium text-ember' : 'text-mid')}>
+              이번 달 {summary.book.thisMonth}권 / {summary.book.perMonth}권
+            </p>
+          </div>
+          <ProgressBar
+            value={Math.min(100, summary.book.usageRate)}
+            color={summary.book.remaining < 0 ? 'bg-ember' : 'bg-deep'}
+            className="mt-3 h-1.5"
+          />
+          {summary.book.remaining < 0 ? (
+            <p className="mt-2 text-micro font-medium text-ember">도서만 구입할 때의 연 한도를 넘었어요.</p>
+          ) : summary.book.thisMonth >= summary.book.perMonth ? (
+            <p className="mt-2 text-micro text-mid">이번 달 도서 신청은 다 썼어요. 다음 달에 신청할 수 있어요.</p>
+          ) : (
+            <p className="mt-2 text-micro text-mid">도서는 말일에 회사가 일괄 구입하니 미리 기안해 두세요.</p>
+          )}
+        </div>
       </Card>
 
       <Card className="md:col-span-2" title="최근 사용">

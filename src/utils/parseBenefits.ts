@@ -33,6 +33,8 @@ const SHORT_DATE = /(?<!\d)(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?(?!\d)/
 
 /** 카테고리 추정 키워드 */
 const CATEGORY_PATTERNS: { re: RegExp; category: BenefitCategory }[] = [
+  // '도서지원비'라는 이름이 비고에 자주 붙으므로 더 구체적인 자격증을 먼저 본다
+  { re: /자격증|수험료|응시료|정기시험|시험\s*응시|토익|토플|오픽|텝스|sqld|adsp|pmp/i, category: '자격증' },
   { re: /도서|책|서적|북스|교보|알라딘|yes24|예스24/i, category: '도서' },
   { re: /교육|강의|강좌|수강|세미나|컨퍼런스|워크숍|워크샵|인프런|패스트캠퍼스|클래스/i, category: '교육' },
   { re: /소프트웨어|라이선스|라이센스|구독|sw|jetbrains|intellij|figma|adobe|notion|github|chatgpt/i, category: '소프트웨어' },
