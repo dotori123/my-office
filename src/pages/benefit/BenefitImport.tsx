@@ -35,7 +35,7 @@ const monthsIn = (name: string) => {
  * 금액은 더하고, 이름에 '개월' 이 있으면 개월 수도 더해서 이름을 바꾼다.
  * (예: 1개월 구독 5건 → 5개월 구독)
  */
-function mergeSameName<T extends ParsedBenefit>(rows: T[]): T[] {
+function mergeSameName<T extends ParsedBenefit>(rows: T[], approvalDate?: string): T[] {
   const groups = new Map<string, T[]>()
   for (const r of rows) {
     const key = r.name.trim()
@@ -52,12 +52,14 @@ function mergeSameName<T extends ParsedBenefit>(rows: T[]): T[] {
       ? sorted[0].name.replace(/\d+\s*개월/, `${months.reduce((s, m) => s + (m as number), 0)}개월`)
       : sorted[0].name
 
+    const last = sorted[sorted.length - 1]
     return {
       ...sorted[0],
       name,
       amount,
-      date: sorted[0].date,
-      memo: `${fmtShort(sorted[0].date)} – ${fmtShort(sorted[sorted.length - 1].date)} · ${group.length}건 합산`,
+      // 결재일이 있으면 그 날짜로, 없으면 마지막 지출일로
+      date: approvalDate ?? last.date,
+      memo: `${fmtShort(sorted[0].date)} – ${fmtShort(last.date)} · ${group.length}건 합산`,
     }
   })
 }
@@ -80,13 +82,14 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
   const existing = useMemo(() => new Set(benefits.map(signature)), [benefits])
 
   const parsed = useMemo(() => {
-    const { rows, skipped } = parseBenefits(text, settings.year)
-    const merged = merge ? mergeSameName(rows) : rows
+    const { rows, skipped, approvalDate } = parseBenefits(text, settings.year)
+    const mergedAll = mergeSameName(rows, approvalDate)
+    const items = merge ? mergedAll : rows
     return {
-      items: merged.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })),
+      items: items.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })),
       skipped,
-      rawCount: rows.length,
-      mergeable: rows.length - mergeSameName(rows).length,
+      approvalDate,
+      mergeable: rows.length - mergedAll.length,
     }
   }, [text, settings.year, existing, merge])
 
@@ -183,6 +186,10 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
                   항목명이 같은 건을 하나로 합치기
                   <span className="mt-0.5 block text-mid">
                     금액을 더하고, 이름에 '개월' 이 있으면 개월 수도 더합니다. (1개월 구독 3건 → 3개월 구독)
+                  </span>
+                  <span className="mt-0.5 block text-mid">
+                    날짜는{' '}
+                    {parsed.approvalDate ? `결재일 ${fmtShort(parsed.approvalDate)}` : '마지막 지출일'} 기준
                   </span>
                 </span>
               </label>

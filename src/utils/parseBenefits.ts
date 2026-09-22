@@ -22,6 +22,8 @@ export interface ParsedBenefit {
 export interface BenefitParseResult {
   rows: ParsedBenefit[]
   skipped: string[]
+  /** 지출결의서의 결재일. 여러 건을 합칠 때 기준 날짜로 쓴다 */
+  approvalDate?: string
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -53,6 +55,59 @@ const cellsOf = (line: string) =>
 
 /** 날짜 하나만 있는 줄 */
 const DATE_ONLY = /^\d{4}\s*[-./년]\s*\d{1,2}\s*[-./월]\s*\d{1,2}\s*일?$/
+
+/** 이 줄부터는 꼬리말 — 합계·계좌 정보가 본문으로 섞이지 않게 잘라낸다 */
+const FOOTER = /^합\s*계|지급\s*계좌|계좌\s*번호|예금주|은행명/
+/** 라벨만 있는 줄 — 조용히 버린다 */
+const LABEL_ONLY = /^(성\s*명|부\s*서|직\s*위|결\s*재\s*일|지출금액|제\s*목|내\s*역|지출일자|지출내역|금\s*액|비\s*고|일금|원정)/
+/** 결재일 라벨 */
+const APPROVAL_LABEL = /결\s*재\s*일|결의\s*일|승인\s*일/
+
+/** 공백이 섞여 있어도 'YYYY년 M월 D일' 하나만 있는 줄이면 날짜로 읽는다 */
+const dateOfLine = (line: string) => {
+  const m = line.match(/^\s*(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?\s*$/)
+  return m ? `${m[1]}-${pad(Number(m[2]))}-${pad(Number(m[3]))}` : null
+}
+
+/**
+ * 지출결의서 양식에서 머리말·꼬리말을 걷어내고 결재일을 찾는다.
+ * 이 과정을 거치지 않으면 '합계' 금액이 마지막 건의 금액으로 잡히고,
+ * 계좌번호·예금주 같은 정보가 메모로 딸려 들어간다.
+ */
+function stripForm(lines: string[]) {
+  const stop = lines.findIndex((l) => FOOTER.test(l))
+  const body = stop === -1 ? lines : lines.slice(0, stop)
+
+  let approvalDate: string | undefined
+  const out: string[] = []
+
+  for (let i = 0; i < body.length; i++) {
+    const line = body[i]
+
+    if (APPROVAL_LABEL.test(line)) {
+      // 라벨과 날짜가 같은 줄에 있을 수도, 다음 줄에 있을 수도 있다
+      const here = dateOfLine(line.replace(APPROVAL_LABEL, ''))
+      const next = body[i + 1] ? dateOfLine(body[i + 1]) : null
+      if (here) approvalDate = here
+      else if (next) {
+        approvalDate = next
+        i += 1
+      }
+      continue
+    }
+
+    if (LABEL_ONLY.test(line)) continue
+    out.push(line)
+  }
+
+  // 결재일이 있으면 지출결의서 양식으로 보고, 첫 지출일자 앞의 머리말(성명·부서 등)은 버린다
+  if (approvalDate) {
+    const first = out.findIndex((l) => DATE_ONLY.test(l))
+    if (first > 0) return { body: out.slice(first), approvalDate }
+  }
+
+  return { body: out, approvalDate }
+}
 
 /**
  * 한 건이 여러 줄에 세로로 나열된 형식을 한 줄로 합친다.
@@ -99,12 +154,14 @@ export function parseBenefits(text: string, defaultYear: number): BenefitParseRe
   const rows: ParsedBenefit[] = []
   const skipped: string[] = []
 
-  joinVerticalBlocks(
+  const { body, approvalDate } = stripForm(
     text
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean),
-  ).forEach((line, i) => {
+  )
+
+  joinVerticalBlocks(body).forEach((line, i) => {
       const cleaned = line.replace(/\(\s*[월화수목금토일]\s*\)|[월화수목금토일]요일/g, ' ')
       const cells = cellsOf(cleaned)
 
@@ -184,5 +241,5 @@ export function parseBenefits(text: string, defaultYear: number): BenefitParseRe
       })
     })
 
-  return { rows, skipped }
+  return { rows, skipped, approvalDate }
 }
