@@ -27,8 +27,9 @@ export interface Leave {
   memo?: string
 }
 
+/** 기본 제공 카테고리. 사용자가 직접 입력한 값도 쓸 수 있어 타입은 열어둔다 */
 export const BENEFIT_CATEGORIES = ['도서', '교육', '소프트웨어', '기타'] as const
-export type BenefitCategory = (typeof BENEFIT_CATEGORIES)[number]
+export type BenefitCategory = string
 
 export interface Benefit {
   id: string

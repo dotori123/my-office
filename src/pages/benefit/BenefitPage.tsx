@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { Benefit, BenefitCategory } from '@/types'
+import { BENEFIT_CATEGORIES, type Benefit, type BenefitCategory } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Badge, Band, Button, Card, EmptyState, Field, Modal, MoneyInput, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, today } from '@/utils/date'
@@ -16,13 +16,14 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'stats', label: '통계' },
 ]
 
-// 카테고리 색 — product finish 파스텔
-const CATEGORY_STYLE: Record<BenefitCategory, string> = {
+// 카테고리 색 — product finish 파스텔. 직접 입력한 카테고리는 기본색을 쓴다
+const CATEGORY_STYLE: Record<string, string> = {
   도서: 'bg-starlight',
   교육: 'bg-sky',
   소프트웨어: 'bg-silver',
   기타: 'bg-wash',
 }
+const catStyle = (c: string) => CATEGORY_STYLE[c] ?? 'bg-wash'
 
 export default function BenefitPage() {
   const { state, dispatch } = useApp()
@@ -152,6 +153,8 @@ function StatusTab({
 function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdit: (b: Benefit) => void; onRemove: (id: string) => void }) {
   const [filter, setFilter] = useState<'all' | BenefitCategory>('all')
   const list = benefits.filter((b) => filter === 'all' || b.category === filter).sort((a, b) => b.date.localeCompare(a.date))
+  // 기본 카테고리 + 실제로 쓰인 카테고리
+  const categories = [...new Set([...BENEFIT_CATEGORIES, ...benefits.map((b) => b.category)])]
 
   const groups = useMemo(() => {
     const m = new Map<string, Benefit[]>()
@@ -164,7 +167,7 @@ function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdi
       title="사용 내역"
       action={
         <div className="flex flex-wrap justify-end gap-1.5">
-          {(['all', '도서', '교육', '소프트웨어', '기타'] as const).map((f) => (
+          {(['all', ...categories] as const).map((f) => (
             <button
               key={f}
               type="button"
@@ -193,7 +196,7 @@ function HistoryTab({ benefits, onEdit, onRemove }: { benefits: Benefit[]; onEdi
                 {items.map((b) => (
                   <li key={b.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3.5">
                     <span className="w-12 shrink-0 text-body-sm font-medium tabular-nums">{fmtShort(b.date)}</span>
-                    <Badge className={CATEGORY_STYLE[b.category]}>{b.category}</Badge>
+                    <Badge className={catStyle(b.category)}>{b.category}</Badge>
                     {/* 좁은 화면에서는 항목명을 아랫줄로 */}
                     <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
                       <p className="truncate text-body-sm">{b.name}</p>
@@ -267,7 +270,7 @@ function StatsTab({ benefits, summary, year }: { benefits: Benefit[]; summary: R
             {cats.map((c) => (
               <li key={c.category}>
                 <div className="mb-1.5 flex items-center justify-between text-body-sm">
-                  <Badge className={CATEGORY_STYLE[c.category]}>{c.category}</Badge>
+                  <Badge className={catStyle(c.category)}>{c.category}</Badge>
                   <span className="font-medium tabular-nums">
                     {fmtWon(c.amount)} <span className="text-caption font-normal text-mid">({Math.round((c.amount / summary.used) * 100)}%)</span>
                   </span>

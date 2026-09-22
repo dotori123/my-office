@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Benefit, BenefitCategory } from '@/types'
+import type { Benefit } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Badge, Button, Modal, cx } from '@/components/ui'
 import { fmtShort, weekdayKo } from '@/utils/date'
 import { fmtWon } from '@/utils/format'
-import { parseBenefits } from '@/utils/parseBenefits'
+import { parseBenefits, type ParsedBenefit } from '@/utils/parseBenefits'
 
 const PLACEHOLDER = `카드 사용내역이나 지출결의서 목록을 복사해서 붙여넣으세요.
 
@@ -13,15 +13,54 @@ const PLACEHOLDER = `카드 사용내역이나 지출결의서 목록을 복사�
 2026-09-10  교육비  42,000원  교육  UX 라이팅 워크숍
 09.15  타입스크립트 프로그래밍  19,000`
 
-const CATEGORY_STYLE: Record<BenefitCategory, string> = {
+const CATEGORY_STYLE: Record<string, string> = {
   도서: 'bg-starlight',
   교육: 'bg-sky',
   소프트웨어: 'bg-silver',
   기타: 'bg-wash',
 }
+const catStyle = (c: string) => CATEGORY_STYLE[c] ?? 'bg-wash'
 
 /** 이미 등록된 건과 같은 건인지 판단하는 값 */
 const signature = (b: { date: string; name: string; amount: number }) => `${b.date}|${b.name}|${b.amount}`
+
+/** 'Claude Pro 1개월 구독' 에서 1 을 꺼낸다 */
+const monthsIn = (name: string) => {
+  const m = name.match(/(\d+)\s*개월/)
+  return m ? Number(m[1]) : null
+}
+
+/**
+ * 항목명이 같은 건을 하나로 합친다.
+ * 금액은 더하고, 이름에 '개월' 이 있으면 개월 수도 더해서 이름을 바꾼다.
+ * (예: 1개월 구독 5건 → 5개월 구독)
+ */
+function mergeSameName<T extends ParsedBenefit>(rows: T[]): T[] {
+  const groups = new Map<string, T[]>()
+  for (const r of rows) {
+    const key = r.name.trim()
+    groups.set(key, [...(groups.get(key) ?? []), r])
+  }
+
+  return [...groups.values()].map((group) => {
+    if (group.length === 1) return group[0]
+
+    const sorted = [...group].sort((a, b) => a.date.localeCompare(b.date))
+    const amount = group.reduce((s, r) => s + r.amount, 0)
+    const months = group.map((r) => monthsIn(r.name))
+    const name = months.every((m) => m !== null)
+      ? sorted[0].name.replace(/\d+\s*개월/, `${months.reduce((s, m) => s + (m as number), 0)}개월`)
+      : sorted[0].name
+
+    return {
+      ...sorted[0],
+      name,
+      amount,
+      date: sorted[0].date,
+      memo: `${fmtShort(sorted[0].date)} – ${fmtShort(sorted[sorted.length - 1].date)} · ${group.length}건 합산`,
+    }
+  })
+}
 
 export default function BenefitImport({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, dispatch } = useApp()
@@ -29,19 +68,27 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
 
   const [text, setText] = useState('')
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  const [merge, setMerge] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setText('')
     setExcluded(new Set())
+    setMerge(false)
   }, [open])
 
   const existing = useMemo(() => new Set(benefits.map(signature)), [benefits])
 
   const parsed = useMemo(() => {
     const { rows, skipped } = parseBenefits(text, settings.year)
-    return { items: rows.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })), skipped }
-  }, [text, settings.year, existing])
+    const merged = merge ? mergeSameName(rows) : rows
+    return {
+      items: merged.map((r) => ({ ...r, duplicate: existing.has(signature(r)) })),
+      skipped,
+      rawCount: rows.length,
+      mergeable: rows.length - mergeSameName(rows).length,
+    }
+  }, [text, settings.year, existing, merge])
 
   const isOn = (row: (typeof parsed.items)[number]) => !row.duplicate && !excluded.has(row.key)
   const selected = parsed.items.filter(isOn)
@@ -113,7 +160,7 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
                       />
                       <span className="w-11 shrink-0 text-caption font-medium tabular-nums">{fmtShort(r.date)}</span>
                       <span className="w-4 shrink-0 text-micro text-mid">{weekdayKo(r.date)}</span>
-                      <Badge className={CATEGORY_STYLE[r.category]}>{r.category}</Badge>
+                      <Badge className={catStyle(r.category)}>{r.category}</Badge>
                       <span className="min-w-0 flex-1 truncate text-micro text-ink">
                         {r.duplicate ? <span className="text-mid">이미 등록됨</span> : r.name}
                       </span>
@@ -122,6 +169,23 @@ export default function BenefitImport({ open, onClose }: { open: boolean; onClos
                   )
                 })}
               </ul>
+            )}
+
+            {(parsed.mergeable > 0 || merge) && (
+              <label className="mt-3 flex items-start gap-2 rounded-[16px] bg-canvas px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 accent-blue"
+                  checked={merge}
+                  onChange={(e) => setMerge(e.target.checked)}
+                />
+                <span className="text-micro leading-relaxed text-deep">
+                  항목명이 같은 건을 하나로 합치기
+                  <span className="mt-0.5 block text-mid">
+                    금액을 더하고, 이름에 '개월' 이 있으면 개월 수도 더합니다. (1개월 구독 3건 → 3개월 구독)
+                  </span>
+                </span>
+              </label>
             )}
 
             {parsed.skipped.length > 0 && (

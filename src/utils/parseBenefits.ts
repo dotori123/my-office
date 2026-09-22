@@ -39,7 +39,7 @@ const CATEGORY_PATTERNS: { re: RegExp; category: BenefitCategory }[] = [
 /** 금액이 아닌 것이 확실한 토큰 */
 const NOISE_TOKENS = new Set([
   '승인', '완료', '대기', '반려', '신청', '사용', '취소', '지급', '정산',
-  '지출결의서', '영수증', '카드', '법인카드', '개인카드', '현금', '계좌이체', '원',
+  '지출결의서', '영수증', '영수증첨부', '첨부', '카드', '법인카드', '개인카드', '현금', '계좌이체', '원',
 ])
 
 const HEADER_WORDS = /사용일|사용처|금액|항목|구분|분류|내역|비고|합계|잔액|승인일|거래|가맹점|적요/
@@ -47,8 +47,42 @@ const HEADER_WORDS = /사용일|사용처|금액|항목|구분|분류|내역|비
 const cellsOf = (line: string) =>
   line
     .split(/\t| {2,}/)
-    .map((c) => c.trim())
+    // '개인카드 /' 처럼 뒤에 붙은 구분자를 떼어낸다
+    .map((c) => c.replace(/\s*[/|]\s*$/, '').trim())
     .filter(Boolean)
+
+/** 날짜 하나만 있는 줄 */
+const DATE_ONLY = /^\d{4}\s*[-./년]\s*\d{1,2}\s*[-./월]\s*\d{1,2}\s*일?$/
+
+/**
+ * 한 건이 여러 줄에 세로로 나열된 형식을 한 줄로 합친다.
+ *
+ *   2026-04-06
+ *   Claude Pro 1개월 구독
+ *   33,493
+ *   개인카드 /
+ *   영수증첨부
+ *
+ * 날짜만 있는 줄이 두 개 이상이면 이 형식으로 보고, 다음 날짜 전까지를 한 건으로 묶는다.
+ */
+function joinVerticalBlocks(lines: string[]) {
+  if (lines.filter((l) => DATE_ONLY.test(l)).length < 2) return lines
+
+  const out: string[] = []
+  let current: string[] | null = null
+  for (const line of lines) {
+    if (DATE_ONLY.test(line)) {
+      if (current) out.push(current.join('\t'))
+      current = [line]
+    } else if (current) {
+      current.push(line)
+    } else {
+      out.push(line) // 첫 날짜 앞의 머리말은 그대로 둔다
+    }
+  }
+  if (current) out.push(current.join('\t'))
+  return out
+}
 
 /** '149,000' '149000원' '-42,000' 같은 금액 후보 */
 const moneyIn = (text: string): number | null => {
@@ -65,11 +99,12 @@ export function parseBenefits(text: string, defaultYear: number): BenefitParseRe
   const rows: ParsedBenefit[] = []
   const skipped: string[] = []
 
-  text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .forEach((line, i) => {
+  joinVerticalBlocks(
+    text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean),
+  ).forEach((line, i) => {
       const cleaned = line.replace(/\(\s*[월화수목금토일]\s*\)|[월화수목금토일]요일/g, ' ')
       const cells = cellsOf(cleaned)
 

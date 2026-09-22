@@ -16,6 +16,8 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState<BenefitCategory>('도서')
+  /** '기타'를 골랐을 때 직접 입력하는 이름 */
+  const [customCategory, setCustomCategory] = useState('')
   const [memo, setMemo] = useState('')
   const [receipt, setReceipt] = useState('')
 
@@ -24,7 +26,10 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
     setDate(initial?.date ?? today())
     setName(initial?.name ?? '')
     setAmount(initial ? String(initial.amount) : '')
-    setCategory(initial?.category ?? '도서')
+    // 기본 카테고리가 아니면 직접 입력한 값으로 본다
+    const preset = (BENEFIT_CATEGORIES as readonly string[]).includes(initial?.category ?? '')
+    setCategory(initial ? (preset ? initial.category : '기타') : '도서')
+    setCustomCategory(initial && !preset ? initial.category : '')
     setMemo(initial?.memo ?? '')
     setReceipt(initial?.receipt ?? '')
   }, [open, initial])
@@ -34,7 +39,7 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
       date,
       name: name.trim(),
       amount: Number(amount) || 0,
-      category,
+      category: category === '기타' && customCategory.trim() ? customCategory.trim() : category,
       memo: memo.trim() || undefined,
       receipt: receipt || undefined,
     }
@@ -51,15 +56,21 @@ export default function BenefitForm({ open, onClose, initial }: Props) {
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="카테고리">
-            <Select value={category} onChange={(e) => setCategory(e.target.value as BenefitCategory)}>
+            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
               {BENEFIT_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {c === '기타' ? '기타 (직접 입력)' : c}
                 </option>
               ))}
             </Select>
           </Field>
         </div>
+
+        {category === '기타' && (
+          <Field label="카테고리 이름" hint="비워두면 '기타'로 저장됩니다.">
+            <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
+          </Field>
+        )}
         <Field label="사용처 / 항목">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
