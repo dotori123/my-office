@@ -4,6 +4,7 @@ import { useSeo } from '@/hooks/useSeo'
 import { Band, Card, Field, Input, PageHero, Stat, cx } from '@/components/ui'
 import { fmtFull, today } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
+import { yearEndOutcome } from '@/utils/leave'
 import { accrualFor, settlementFor, firstAnniversary } from '@/utils/accrual'
 
 /**
@@ -97,6 +98,11 @@ export default function SettlementPage() {
                     {thisYear.note}
                     {unused < 0 && ' · 받은 것보다 더 썼어요. 정산에서 빠질 수 있어요.'}
                   </p>
+                  {unused > 0 && (
+                    <p className="mt-1 text-micro text-mid">
+                      연말까지 다니면 {fmtDays(yearEndOutcome(unused).payout)}만 수당이고 나머지는 소멸하지만, 퇴사 정산은 보통 남은 연차를 모두 수당으로 줍니다.
+                    </p>
+                  )}
                   <p className="mt-1 text-micro text-mid">
                     사용 일수는 이 앱에 등록한 {leaveYear}년 연차만 셉니다. 실제 기록과 다르면 숫자도 달라져요.
                   </p>

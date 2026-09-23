@@ -7,7 +7,7 @@ import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, Progres
 import { fmtShort, fmtFull, today, weekdayKo } from '@/utils/date'
 import { accrualFor, nextRaise } from '@/utils/accrual'
 import { fmtDays } from '@/utils/format'
-import { leaveLabel, summarizeLeaves } from '@/utils/leave'
+import { leaveLabel, summarizeLeaves, yearEndOutcome } from '@/utils/leave'
 import LeaveForm from './LeaveForm'
 import LeaveRecommend from './LeaveRecommend'
 import LeaveImport from './LeaveImport'
@@ -112,6 +112,7 @@ function StatusTab({
   raise: ReturnType<typeof nextRaise>
 }) {
   const base = today()
+  const outcome = yearEndOutcome(summary.remaining)
   const upcoming = leaves.filter((l) => l.startDate > base).sort((a, b) => a.startDate.localeCompare(b.startDate))
 
   const monthly = useMemo(
@@ -139,6 +140,20 @@ function StatusTab({
           <Stat label="예정" value={fmtDays(summary.planned)} />
           <Stat label="잔여" value={fmtDays(summary.remaining)} />
         </div>
+
+        {/* 남은 연차는 연말에 일부만 수당이 되고 나머지는 소멸한다 */}
+        {outcome.payout + outcome.expire > 0 && (
+          <p className="mt-4 text-caption text-mid">
+            연말까지 안 쓰면 <span className="text-ink">{fmtDays(outcome.payout)}은 수당</span>
+            {outcome.expire > 0 ? (
+              <>
+                , <span className="font-medium text-ember">{fmtDays(outcome.expire)}은 소멸</span>돼요.
+              </>
+            ) : (
+              <>로 받아요. (수당은 최대 {fmtDays(outcome.limit)})</>
+            )}
+          </p>
+        )}
         {summary.familyDays > 0 && (
           <p className="mt-4 text-caption text-mid">경조휴가 {summary.familyDays}일은 연차와 별개라 여기에 포함하지 않았어요.</p>
         )}

@@ -1,6 +1,7 @@
 import type { CalendarEvent, Leave } from '@/types'
 import { HOLIDAY_MAP } from '@/data/holidays'
 import { FAMILY_EVENT_MAP } from '@/data/familyEvents'
+import { PAYOUT_LIMIT } from '@/data/leaveRules'
 import { addDays, buildDayOffContext, diffDays, isDayOff, isWorkingDay, today, type DayOffContext } from './date'
 
 export interface LeaveSummary {
@@ -20,6 +21,16 @@ export const summarizeLeaves = (leaves: Leave[], total: number, base = today()):
   const remaining = total - used - planned
   const familyDays = leaves.filter((l) => l.type === '경조').reduce((s, l) => s + diffDays(l.startDate, l.endDate) + 1, 0)
   return { total, used, planned, remaining, usageRate: total === 0 ? 0 : Math.round((used / total) * 100), familyDays }
+}
+
+/**
+ * 연말까지 남은 연차를 안 쓰면 어떻게 되는지.
+ * 정해진 일수까지만 수당으로 받고 나머지는 소멸한다.
+ */
+export const yearEndOutcome = (remaining: number) => {
+  const left = Math.max(0, remaining)
+  const payout = Math.min(PAYOUT_LIMIT, left)
+  return { payout, expire: Math.round((left - payout) * 100) / 100, limit: PAYOUT_LIMIT }
 }
 
 /** 목록·달력에 보여줄 이름. 경조휴가는 사유를, 나머지는 유형을 */
