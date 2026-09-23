@@ -141,16 +141,19 @@ function StatusTab({
           <Stat label="잔여" value={fmtDays(summary.remaining)} />
         </div>
 
-        {/* 남은 연차는 연말에 일부만 수당이 되고 나머지는 소멸한다 */}
-        {outcome.payout + outcome.expire > 0 && (
+        {/* 안 쓰면 남은 만큼 사라지고, 그중 일부까지만 수당으로 받을 수 있다 */}
+        {summary.remaining > 0 && (
           <p className="mt-4 text-caption text-mid">
-            연말까지 안 쓰면 <span className="text-ink">{fmtDays(outcome.payout)}은 수당</span>
             {outcome.expire > 0 ? (
               <>
-                , <span className="font-medium text-ember">{fmtDays(outcome.expire)}은 소멸</span>돼요.
+                연말까지 안 쓰면 <span className="font-medium text-ember">{fmtDays(summary.remaining)}이 사라져요</span>. 그중{' '}
+                <span className="text-ink">{fmtDays(outcome.payout)}까지는 수당</span>으로 받을 수 있어요.
               </>
             ) : (
-              <>로 받아요. (수당은 최대 {fmtDays(outcome.limit)})</>
+              <>
+                연말까지 안 쓰면 <span className="text-ink">{fmtDays(summary.remaining)}은 수당</span>으로 받아요. (수당은 최대{' '}
+                {fmtDays(outcome.limit)})
+              </>
             )}
           </p>
         )}

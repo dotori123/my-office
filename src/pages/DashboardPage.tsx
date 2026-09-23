@@ -141,12 +141,10 @@ export default function DashboardPage() {
           >
             <div className="min-w-0">
               <p className={cx('text-body-sm font-medium', outlook.level === 'urgent' ? 'text-ember' : 'text-ink')}>
-                {outlook.level === 'urgent' ? '연말까지 ' : '올해 안에 안 쓰면 '}
-                {fmtDays(outlook.expire)}이 사라져요
+                {outlook.level === 'urgent' ? '연말까지' : '올해 안에'} 안 쓰면 {fmtDays(leave.remaining)}이 사라져요
               </p>
               <p className="mt-1 text-caption text-mid">
-                남은 {fmtDays(leave.remaining)} 중 {fmtDays(outlook.payout)}은 수당으로 받고 나머지는 소멸돼요 · 12월 31일까지 근무일{' '}
-                {outlook.workingDaysLeft}일
+                그중 {fmtDays(outlook.payout)}까지는 수당으로 받을 수 있어요 · 12월 31일까지 근무일 {outlook.workingDaysLeft}일
                 {outlook.tooLate && ' · 남은 근무일보다 연차가 많아요'}
               </p>
             </div>
