@@ -6,6 +6,7 @@ import { Band, Button, Card, ConfirmDialog, DragHandle, EmptyState, Input, PageH
 import { useDragList } from '@/hooks/useDragList'
 import ProjectCard from './ProjectCard'
 import ProjectForm from './ProjectForm'
+import ProjectImport from './ProjectImport'
 
 export default function ProjectPage() {
   useSeo({
@@ -19,6 +20,7 @@ export default function ProjectPage() {
   const [editing, setEditing] = useState<Project | null>(null)
   const [q, setQ] = useState('')
   const [removing, setRemoving] = useState<Project | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const ordered = useMemo(() => [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [projects])
 
@@ -55,7 +57,14 @@ export default function ProjectPage() {
           eyebrow="테스트 · 운영 · WBS · 저장소 · 디자인"
           title="프로젝트"
           sub="자주 쓰는 프로젝트의 업무 환경을 등록해 두고, 관련 링크를 한 번에 열어요."
-          action={<Button onClick={openNew}>프로젝트 등록</Button>}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                붙여넣기로 가져오기
+              </Button>
+              <Button onClick={openNew}>프로젝트 등록</Button>
+            </div>
+          }
         />
         <div className="mx-auto mt-10 max-w-[420px]">
           <Input placeholder="프로젝트 · 링크 검색" value={q} onChange={(e) => setQ(e.target.value)} className="rounded-pill bg-canvas px-5 text-center" />
@@ -102,6 +111,7 @@ export default function ProjectPage() {
         )}
       </Band>
 
+      <ProjectImport open={importOpen} onClose={() => setImportOpen(false)} />
       <ProjectForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
       <ConfirmDialog
         open={removing !== null}

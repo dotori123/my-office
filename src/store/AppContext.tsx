@@ -33,6 +33,7 @@ type Action =
   | { type: 'project/update'; payload: Project }
   | { type: 'project/remove'; id: string }
   | { type: 'project/reorder'; ids: string[] }
+  | { type: 'project/import'; payload: Omit<Project, 'id' | 'userId'>[] }
   | { type: 'user/update'; payload: Partial<User> }
   | { type: 'settings/update'; payload: Partial<Settings> }
   | { type: 'reset' }
@@ -107,6 +108,13 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, projects: state.projects.map((p) => (p.id === action.payload.id ? action.payload : p)) }
     case 'project/remove':
       return { ...state, projects: state.projects.filter((p) => p.id !== action.id) }
+    case 'project/import': {
+      let order = Math.max(-1, ...state.projects.map((p) => p.order ?? -1))
+      return {
+        ...state,
+        projects: [...state.projects, ...action.payload.map((p) => ({ ...p, order: ++order, id: uid(), userId: state.user.id }))],
+      }
+    }
     case 'project/reorder': {
       const rank = new Map(action.ids.map((id, i) => [id, i]))
       return {
