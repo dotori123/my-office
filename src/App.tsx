@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProvider } from '@/store/AppContext'
 import Layout from '@/components/layout/Layout'
 import ScrollToTop from '@/components/layout/ScrollToTop'
+import UpdatePrompt from '@/components/layout/UpdatePrompt'
 import DashboardPage from '@/pages/DashboardPage'
 import LeavePage from '@/pages/leave/LeavePage'
 import SettlementPage from '@/pages/leave/SettlementPage'
@@ -18,6 +19,7 @@ export default function App() {
     <AppProvider>
       <BrowserRouter>
         <ScrollToTop />
+        <UpdatePrompt />
         <Routes>
           {/* 소개 페이지는 내비·레이아웃 없이 단독으로 */}
           <Route
