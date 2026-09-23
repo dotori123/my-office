@@ -36,6 +36,7 @@ type Action =
   | { type: 'user/update'; payload: Partial<User> }
   | { type: 'settings/update'; payload: Partial<Settings> }
   | { type: 'reset' }
+  | { type: 'state/replace'; payload: AppState }
 
 const STORAGE_KEY = 'my-office:v2'
 
@@ -120,6 +121,9 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, settings: { ...state.settings, ...action.payload } }
     case 'reset':
       return initialState
+    // 백업 파일에서 되돌리기 — 빠진 항목은 초기값으로 채운다
+    case 'state/replace':
+      return { ...initialState, ...action.payload, projects: withOrder(action.payload.projects ?? []) }
     default:
       return state
   }

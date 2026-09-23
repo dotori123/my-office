@@ -1,8 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApp } from '@/store/AppContext'
 import { Button, Field, Input, Modal, MoneyInput } from '@/components/ui'
 import { fmtFull, fmtShort, tenureText } from '@/utils/date'
 import { accrualFor, nextRaise } from '@/utils/accrual'
+import { downloadBackup, parseBackup, summarize } from '@/utils/backup'
+import type { AppState } from '@/store/AppContext'
 
 /**
  * 내 정보 — 상단 내비의 이름을 눌러 연다.
@@ -34,9 +36,15 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
   const [joinDate, setJoinDate] = useState('')
   const [totalLeave, setTotalLeave] = useState('')
   const [totalBenefit, setTotalBenefit] = useState('')
+  /** 가져오기로 읽어 둔 백업 — 확인을 받고 나서 적용한다 */
+  const [pending, setPending] = useState<AppState | null>(null)
+  const [backupError, setBackupError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) return
+    setPending(null)
+    setBackupError('')
     setName(user.name)
     setCompany(user.company)
     setDepartment(user.department)
@@ -61,6 +69,26 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
       type: 'settings/update',
       payload: { totalLeave: Number(totalLeave) || 0, totalBenefit: Number(totalBenefit) || 0 },
     })
+    onClose()
+  }
+
+  const readFile = async (file: File) => {
+    setBackupError('')
+    const result = parseBackup(await file.text())
+    if ('error' in result) {
+      setPending(null)
+      setBackupError(result.error)
+      return
+    }
+    setPending(result.state)
+  }
+
+  /** 되돌리기 전에 지금 데이터를 먼저 내려받아 둔다 */
+  const applyPending = () => {
+    if (!pending) return
+    downloadBackup(state, 'my-office-이전')
+    dispatch({ type: 'state/replace', payload: pending })
+    setPending(null)
     onClose()
   }
 
@@ -133,6 +161,52 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
                 </p>
               )}
               <p className="mt-1 text-micro text-mid">회계연도(1/1) 기준으로 계산한 참고값이에요. 회사 계산과 다르면 직접 고치세요.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-hairline pt-5">
+          <p className="mb-3 text-caption text-mid">데이터 백업</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => downloadBackup(state)}>
+              내보내기
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
+              파일에서 되돌리기
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) void readFile(f)
+                e.target.value = ''
+              }}
+            />
+          </div>
+          <p className="mt-1.5 text-micro text-mid">
+            데이터는 이 브라우저에만 있어요. 가끔 내보내 두면 브라우저를 지우거나 PC 를 바꿔도 되돌릴 수 있어요.
+          </p>
+
+          {backupError && <p className="mt-2 text-micro text-ember">{backupError}</p>}
+
+          {pending && (
+            <div className="mt-3 rounded-[16px] bg-starlight px-4 py-3">
+              <p className="text-caption text-deep">
+                연차 {summarize(pending).leaves}건 · 지원비 {summarize(pending).benefits}건 · 일정 {summarize(pending).events}건 · 프로젝트{' '}
+                {summarize(pending).projects}개를 되돌립니다.
+              </p>
+              <p className="mt-1 text-micro text-mid">지금 데이터는 사라져요. 되돌리기 전에 지금 데이터를 자동으로 내려받아 둡니다.</p>
+              <div className="mt-3 flex gap-2">
+                <Button size="sm" onClick={applyPending}>
+                  되돌리기
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPending(null)}>
+                  취소
+                </Button>
+              </div>
             </div>
           )}
         </div>
