@@ -6,7 +6,7 @@ import { ArrowLink, Band, Card, ProgressBar, cx } from '@/components/ui'
 import { HOLIDAYS } from '@/data/holidays'
 import { addDays, buildDayOffContext, countWorkingDays, diffDays, fmtFull, fmtShort, isDayOff, tenureText, today, weekdayKo } from '@/utils/date'
 import { fmtDays, fmtWon } from '@/utils/format'
-import { leaveLabel, summarizeLeaves } from '@/utils/leave'
+import { leaveLabel, summarizeLeaves, yearEndOutlook } from '@/utils/leave'
 import { summarizeBenefits } from '@/utils/benefit'
 import { EVENT_STYLE, type UnifiedEvent } from '@/pages/calendar/eventStyle'
 import ProjectCard from '@/pages/project/ProjectCard'
@@ -43,6 +43,12 @@ export default function DashboardPage() {
 
   const leave = summarizeLeaves(leaves, settings.totalLeave)
   const benefit = summarizeBenefits(benefits, settings.totalBenefit)
+
+  // 연말에 소멸될 연차 — 4분기에 들어서면 알려준다
+  const outlook = useMemo(
+    () => yearEndOutlook(leave.remaining, buildDayOffContext(leaves, events), base),
+    [leave.remaining, leaves, events, base],
+  )
 
   // 다가오는 일정 (공휴일 + 연차 + 회사/개인 일정) 상위 5개
   const upcoming = useMemo<UnifiedEvent[]>(() => {
@@ -123,6 +129,36 @@ export default function DashboardPage() {
           </p>
         </div>
       </Band>
+
+      {/* 연말 소멸 경고 */}
+      {outlook.show && (
+        <Band inner="pt-0 pb-10 md:pb-14">
+          <div
+            className={cx(
+              'flex flex-col gap-3 rounded-[20px] px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6 md:py-5',
+              outlook.level === 'urgent' ? 'bg-starlight' : outlook.level === 'warn' ? 'bg-starlight/60' : 'bg-canvas',
+            )}
+          >
+            <div className="min-w-0">
+              <p className={cx('text-body-sm font-medium', outlook.level === 'urgent' ? 'text-ember' : 'text-ink')}>
+                {outlook.level === 'urgent' ? '연말까지 ' : '올해 안에 안 쓰면 '}
+                {fmtDays(outlook.expire)}이 사라져요
+              </p>
+              <p className="mt-1 text-caption text-mid">
+                남은 {fmtDays(leave.remaining)} 중 {fmtDays(outlook.payout)}은 수당으로 받고 나머지는 소멸돼요 · 12월 31일까지 근무일{' '}
+                {outlook.workingDaysLeft}일
+                {outlook.tooLate && ' · 남은 근무일보다 연차가 많아요'}
+              </p>
+            </div>
+            <Link
+              to="/leave?tab=recommend"
+              className="shrink-0 self-start rounded-pill bg-ink px-4 py-2 text-caption text-paper transition-colors hover:bg-deep sm:self-auto"
+            >
+              연차 추천 보기
+            </Link>
+          </div>
+        </Band>
+      )}
 
       {/* 핵심 숫자 */}
       <Band tone="gray">

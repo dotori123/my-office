@@ -2,7 +2,7 @@ import type { CalendarEvent, Leave } from '@/types'
 import { HOLIDAY_MAP } from '@/data/holidays'
 import { FAMILY_EVENT_MAP } from '@/data/familyEvents'
 import { PAYOUT_LIMIT } from '@/data/leaveRules'
-import { addDays, buildDayOffContext, diffDays, isDayOff, isWorkingDay, today, type DayOffContext } from './date'
+import { addDays, buildDayOffContext, countWorkingDays, diffDays, isDayOff, isWorkingDay, today, type DayOffContext } from './date'
 
 export interface LeaveSummary {
   total: number
@@ -31,6 +31,33 @@ export const yearEndOutcome = (remaining: number) => {
   const left = Math.max(0, remaining)
   const payout = Math.min(PAYOUT_LIMIT, left)
   return { payout, expire: Math.round((left - payout) * 100) / 100, limit: PAYOUT_LIMIT }
+}
+
+/** 연말이 다가올수록 경고를 세게 한다 */
+export type ExpiryLevel = 'info' | 'warn' | 'urgent'
+
+/**
+ * 연말까지 남은 연차가 어떻게 되는지 미리 알려주기 위한 값.
+ * 소멸될 연차가 있고 연말이 100일 안쪽일 때만 보여준다 (대략 4분기부터).
+ */
+export const yearEndOutlook = (remaining: number, ctx: DayOffContext, base = today()) => {
+  const end = `${base.slice(0, 4)}-12-31`
+  const daysLeft = diffDays(base, end)
+  const { payout, expire, limit } = yearEndOutcome(remaining)
+  const workingDaysLeft = countWorkingDays(base, end, ctx)
+  const level: ExpiryLevel = daysLeft <= 30 ? 'urgent' : daysLeft <= 60 ? 'warn' : 'info'
+  return {
+    show: expire > 0 && daysLeft >= 0 && daysLeft <= 100,
+    payout,
+    expire,
+    limit,
+    daysLeft,
+    workingDaysLeft,
+    level,
+    end,
+    /** 남은 근무일보다 써야 할 연차가 많으면 다 쓰는 게 불가능하다 */
+    tooLate: remaining > workingDaysLeft,
+  }
 }
 
 /** 목록·달력에 보여줄 이름. 경조휴가는 사유를, 나머지는 유형을 */
