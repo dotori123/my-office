@@ -1,11 +1,13 @@
 /**
- * 2026년 대한민국 공휴일.
+ * 대한민국 공휴일.
  * 추후 공휴일 API(공공데이터포털) 응답으로 교체 예정.
  *
  * 대체공휴일 규정 (직접 넣을 때 주의)
  * - 설날·추석 연휴: 연휴가 '일요일'과 겹칠 때만 적용. 토요일과 겹치는 건 해당 없음
  * - 삼일절·어린이날·부처님오신날·광복절·개천절·한글날·성탄절: 토요일 또는 일요일과 겹치면 적용
  * - 신정·현충일: 대체공휴일 없음
+ *
+ * 선거일과 임시공휴일은 확정된 것만 넣는다.
  */
 export interface Holiday {
   date: string
@@ -36,4 +38,32 @@ export const HOLIDAYS_2026: Holiday[] = [
   { date: '2026-12-25', name: '성탄절' },
 ]
 
-export const HOLIDAY_MAP = new Map(HOLIDAYS_2026.map((h) => [h.date, h.name]))
+export const HOLIDAYS_2027: Holiday[] = [
+  { date: '2027-01-01', name: '신정' }, // 금
+  { date: '2027-02-05', name: '설날 연휴' }, // 금
+  { date: '2027-02-06', name: '설날' }, // 토
+  { date: '2027-02-07', name: '설날 연휴' }, // 일
+  { date: '2027-02-08', name: '대체공휴일(설날)' }, // 연휴가 일요일(2/7)과 겹쳐서
+  { date: '2027-03-01', name: '삼일절' }, // 월
+  { date: '2027-05-05', name: '어린이날' }, // 수
+  { date: '2027-05-13', name: '부처님오신날' }, // 목
+  { date: '2027-06-06', name: '현충일' }, // 일 — 현충일은 대체공휴일이 없다
+  { date: '2027-08-15', name: '광복절' }, // 일
+  { date: '2027-08-16', name: '대체공휴일(광복절)' },
+  { date: '2027-09-14', name: '추석 연휴' }, // 화
+  { date: '2027-09-15', name: '추석' }, // 수
+  { date: '2027-09-16', name: '추석 연휴' }, // 목 — 연휴가 평일뿐이라 대체공휴일 없음
+  { date: '2027-10-03', name: '개천절' }, // 일
+  { date: '2027-10-04', name: '대체공휴일(개천절)' },
+  { date: '2027-10-09', name: '한글날' }, // 토
+  { date: '2027-10-11', name: '대체공휴일(한글날)' }, // 10/10 은 일요일이라 그 다음 평일로
+  { date: '2027-12-25', name: '성탄절' }, // 토
+  { date: '2027-12-27', name: '대체공휴일(성탄절)' }, // 12/26 은 일요일이라 그 다음 평일로
+]
+
+export const HOLIDAYS: Holiday[] = [...HOLIDAYS_2026, ...HOLIDAYS_2027]
+
+export const HOLIDAY_MAP = new Map(HOLIDAYS.map((h) => [h.date, h.name]))
+
+/** 해당 연도의 공휴일만 */
+export const holidaysIn = (year: number) => HOLIDAYS.filter((h) => h.date.startsWith(String(year)))

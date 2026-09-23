@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
 import { ArrowLink, Band, Card, ProgressBar, cx } from '@/components/ui'
-import { HOLIDAYS_2026 } from '@/data/holidays'
+import { HOLIDAYS } from '@/data/holidays'
 import { addDays, buildDayOffContext, countWorkingDays, diffDays, fmtFull, fmtShort, isDayOff, tenureText, today, weekdayKo } from '@/utils/date'
 import { fmtDays, fmtWon } from '@/utils/format'
 import { leaveLabel, summarizeLeaves } from '@/utils/leave'
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   // 다가오는 일정 (공휴일 + 연차 + 회사/개인 일정) 상위 5개
   const upcoming = useMemo<UnifiedEvent[]>(() => {
     const list: UnifiedEvent[] = [
-      ...HOLIDAYS_2026.map((h) => ({ id: h.date, date: h.date, title: h.name, type: 'holiday' as const })),
+      ...HOLIDAYS.map((h) => ({ id: h.date, date: h.date, title: h.name, type: 'holiday' as const })),
       ...leaves.map((l) => ({ id: l.id, date: l.startDate, title: leaveLabel(l), type: 'leave' as const })),
       ...events.map((e) => ({ id: e.id, date: e.date, title: e.title, type: e.type })),
     ]

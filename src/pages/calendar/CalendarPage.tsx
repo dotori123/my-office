@@ -4,7 +4,7 @@ import type { CalendarEvent } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
 import { ArrowLink, Band, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, PageHero, cx } from '@/components/ui'
-import { HOLIDAYS_2026 } from '@/data/holidays'
+import { HOLIDAYS } from '@/data/holidays'
 import { addDays, fmtKo, fromKey, isWeekend, monthGrid, today, weekdayKo } from '@/utils/date'
 import { leaveLabel, recommendLeaves, summarizeLeaves } from '@/utils/leave'
 import { EVENT_STYLE, type UnifiedEvent } from './eventStyle'
@@ -43,7 +43,7 @@ export default function CalendarPage() {
   const eventMap = useMemo(() => {
     const map = new Map<string, UnifiedEvent[]>()
     const push = (e: UnifiedEvent) => map.set(e.date, [...(map.get(e.date) ?? []), e])
-    HOLIDAYS_2026.forEach((h) => push({ id: `h-${h.date}`, date: h.date, title: h.name, type: 'holiday' }))
+    HOLIDAYS.forEach((h) => push({ id: `h-${h.date}`, date: h.date, title: h.name, type: 'holiday' }))
     leaves.forEach((l) => {
       for (let cur = l.startDate; cur <= l.endDate; cur = addDays(cur, 1)) {
         push({ id: l.id, date: cur, title: leaveLabel(l), type: 'leave', memo: l.memo })
