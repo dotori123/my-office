@@ -4,12 +4,16 @@ import { useSeo } from '@/hooks/useSeo'
 import { Band, Card, Field, Input, PageHero, Stat, cx } from '@/components/ui'
 import { fmtFull, today } from '@/utils/date'
 import { fmtDays } from '@/utils/format'
-import { settlementFor, firstAnniversary } from '@/utils/accrual'
+import { accrualFor, settlementFor, firstAnniversary } from '@/utils/accrual'
 
 /**
  * 퇴사 연차 정산 — 내비에 없고 /leave/settlement 주소로만 들어간다.
  *
- * 회계연도 기준으로 받아 온 연차와 입사일 기준으로 다시 계산한 연차를 견줘 차이를 보여준다.
+ * 두 가지를 따로 본다.
+ *  1. 수당 대상: 퇴사하는 해에 받은 연차 중 아직 안 쓴 일수 (연차수당은 그 해 기준이다)
+ *  2. 법정 미달 확인: 입사일 기준으로 다시 계산한 '누적' 발생량과 회계연도 기준 '누적' 부여량의 차이.
+ *     회계연도 기준으로 운영하더라도 입사일 기준보다 적게 주면 안 되므로, 모자라면 그만큼 더 받는다.
+ *
  * 수당 금액은 급여 정보가 필요해 다루지 않는다.
  */
 export default function SettlementPage() {
@@ -20,15 +24,22 @@ export default function SettlementPage() {
   const [joinDate, setJoinDate] = useState(user.joinDate)
   const [leaveDate, setLeaveDate] = useState(today())
 
-  const result = useMemo(() => settlementFor(joinDate, leaveDate), [joinDate, leaveDate])
+  const leaveYear = Number(leaveDate.slice(0, 4))
 
-  // 재직 기간에 쓴 연차 (경조휴가는 차감되지 않으므로 빠진다)
-  const used = useMemo(
-    () => leaves.filter((l) => l.startDate >= joinDate && l.startDate <= leaveDate).reduce((s, l) => s + l.amount, 0),
-    [leaves, joinDate, leaveDate],
+  /** 퇴사하는 해에 받은 연차 — 수당 대상을 따질 기준 */
+  const thisYear = useMemo(() => accrualFor(joinDate, leaveYear, leaveDate), [joinDate, leaveYear, leaveDate])
+
+  /** 입사일 기준 누적 vs 회계연도 기준 누적 */
+  const cumulative = useMemo(() => settlementFor(joinDate, leaveDate), [joinDate, leaveDate])
+
+  /** 퇴사하는 해에 쓴 연차 (경조휴가는 차감이 없어 저절로 빠진다) */
+  const usedThisYear = useMemo(
+    () => leaves.filter((l) => l.startDate >= `${leaveYear}-01-01` && l.startDate <= leaveDate).reduce((s, l) => s + l.amount, 0),
+    [leaves, leaveYear, leaveDate],
   )
 
-  const remaining = result ? Math.round((result.legal.total - used) * 100) / 100 : 0
+  const granted = thisYear?.total ?? 0
+  const unused = Math.round((granted - usedThisYear) * 100) / 100
 
   return (
     <>
@@ -36,7 +47,7 @@ export default function SettlementPage() {
         <PageHero
           eyebrow="참고용 계산"
           title="연차 정산"
-          sub="퇴사할 때는 입사일부터 퇴사일까지로 연차를 다시 계산합니다. 회계연도 기준으로 받아 온 연차와 얼마나 차이 나는지 봅니다."
+          sub="퇴사하는 해에 남은 연차가 얼마인지 보고, 입사일 기준으로 다시 계산했을 때 모자라지 않는지 확인합니다."
         />
       </Band>
 
@@ -61,54 +72,62 @@ export default function SettlementPage() {
           </Card>
 
           <div className="space-y-5 md:col-span-3">
-            {!result ? (
+            {!cumulative || !thisYear ? (
               <Card>
                 <p className="py-6 text-center text-caption text-mid">입사일과 퇴사일을 확인해 주세요.</p>
               </Card>
             ) : (
               <>
-                <Card eyebrow="입사일 기준으로 다시 계산하면">
+                {/* 1. 수당 대상 — 그 해 연차 기준 */}
+                <Card eyebrow={`${leaveYear}년 남은 연차`}>
                   <div className="flex items-end justify-between">
-                    <p className="text-heading-sm font-bold tabular-nums md:text-heading">{fmtDays(result.legal.total)}</p>
-                    <p className="text-body-sm text-mid">회계연도 기준 {fmtDays(result.fiscal.total)}</p>
+                    <p className={cx('text-heading-sm font-bold tabular-nums md:text-heading', unused < 0 && 'text-ember')}>{fmtDays(unused)}</p>
+                    <p className="text-body-sm text-mid">미사용 연차 수당 대상</p>
                   </div>
 
                   <div className="mt-6 grid grid-cols-3 gap-3">
-                    <Stat label="월차" value={fmtDays(result.legal.monthly)} />
-                    <Stat label="연차" value={fmtDays(result.legal.annual)} />
-                    <Stat label="사용" value={fmtDays(used)} />
+                    <Stat label={`${leaveYear}년 부여`} value={fmtDays(granted)} />
+                    <Stat label="사용" value={fmtDays(usedThisYear)} />
+                    <Stat label="미사용" value={fmtDays(unused)} />
                   </div>
 
-                  <div className={cx('mt-5 rounded-[16px] px-4 py-3', result.diff === 0 ? 'bg-canvas' : 'bg-starlight')}>
-                    {result.diff === 0 ? (
-                      <p className="text-caption text-deep">두 기준의 연차 일수가 같아요.</p>
-                    ) : result.diff > 0 ? (
-                      <p className="text-caption text-deep">
-                        입사일 기준이 <span className="font-medium text-ink">{fmtDays(result.diff)} 많아요.</span> 정산 때 그만큼 더 받을 수 있어요.
-                      </p>
-                    ) : (
-                      <p className="text-caption text-deep">
-                        회계연도 기준으로 <span className="font-medium text-ink">{fmtDays(-result.diff)} 더 받아</span> 두었어요. 이미 썼다면 정산에서 빠질 수 있어요.
-                      </p>
-                    )}
-                    <p className="mt-1 text-micro text-mid">
-                      남은 연차 {fmtDays(remaining)} (발생 {fmtDays(result.legal.total)} − 사용 {fmtDays(used)}) · 사용 일수는 이 앱에 등록한 것만 세므로 실제와 다를 수 있어요
-                    </p>
-                  </div>
+                  <p className="mt-4 text-caption text-mid">
+                    {thisYear.note}
+                    {unused < 0 && ' · 받은 것보다 더 썼어요. 정산에서 빠질 수 있어요.'}
+                  </p>
+                  <p className="mt-1 text-micro text-mid">
+                    사용 일수는 이 앱에 등록한 {leaveYear}년 연차만 셉니다. 실제 기록과 다르면 숫자도 달라져요.
+                  </p>
                 </Card>
 
-                <Card title="부여 내역">
-                  <div className="grid gap-6 sm:grid-cols-2">
+                {/* 2. 법정 미달 확인 — 누적 비교 */}
+                <Card eyebrow="입사일 기준으로 다시 계산하면" title={`누적 ${fmtDays(cumulative.legal.total)} / 회계연도 기준 ${fmtDays(cumulative.fiscal.total)}`}>
+                  <div className={cx('rounded-[16px] px-4 py-3', cumulative.diff > 0 ? 'bg-starlight' : 'bg-canvas')}>
+                    {cumulative.diff > 0 ? (
+                      <p className="text-caption text-deep">
+                        입사일 기준이 <span className="font-medium text-ink">{fmtDays(cumulative.diff)} 많아요.</span> 회계연도 기준으로 운영해도 입사일 기준보다 적게 줄 수는 없어서, 그만큼 더 받을 수 있어요.
+                      </p>
+                    ) : cumulative.diff < 0 ? (
+                      <p className="text-caption text-deep">
+                        회계연도 기준으로 <span className="font-medium text-ink">{fmtDays(-cumulative.diff)} 더</span> 받아 두었어요. 법정 미달은 아니에요.
+                      </p>
+                    ) : (
+                      <p className="text-caption text-deep">두 기준의 누적 일수가 같아요.</p>
+                    )}
+                    <p className="mt-1 text-micro text-mid">입사한 날부터 퇴사일까지 발생한 일수를 모두 더해 견준 값이에요. 위의 남은 연차와는 다른 이야기예요.</p>
+                  </div>
+
+                  <div className="mt-5 grid gap-6 sm:grid-cols-2">
                     <div>
                       <p className="mb-2 text-caption text-mid">입사일 기준</p>
                       <ul className="space-y-1.5">
-                        {result.legal.monthly > 0 && (
+                        {cumulative.legal.monthly > 0 && (
                           <li className="flex justify-between text-caption">
                             <span className="text-deep">1년 미만 월차</span>
-                            <span className="tabular-nums">{fmtDays(result.legal.monthly)}</span>
+                            <span className="tabular-nums">{fmtDays(cumulative.legal.monthly)}</span>
                           </li>
                         )}
-                        {result.legal.grants.map((g, i) => (
+                        {cumulative.legal.grants.map((g, i) => (
                           <li key={g.date} className="flex justify-between text-caption">
                             <span className="text-deep">
                               {fmtFull(g.date)} <span className="text-mid">({i + 1}주년)</span>
@@ -116,26 +135,26 @@ export default function SettlementPage() {
                             <span className="tabular-nums">{fmtDays(g.days)}</span>
                           </li>
                         ))}
-                        {result.legal.total === 0 && <li className="text-caption text-mid">아직 발생한 연차가 없어요.</li>}
+                        {cumulative.legal.total === 0 && <li className="text-caption text-mid">아직 발생한 연차가 없어요.</li>}
                       </ul>
                     </div>
 
                     <div>
                       <p className="mb-2 text-caption text-mid">회계연도 기준</p>
                       <ul className="space-y-1.5">
-                        {result.fiscal.monthly > 0 && (
+                        {cumulative.fiscal.monthly > 0 && (
                           <li className="flex justify-between text-caption">
                             <span className="text-deep">1년 미만 월차</span>
-                            <span className="tabular-nums">{fmtDays(result.fiscal.monthly)}</span>
+                            <span className="tabular-nums">{fmtDays(cumulative.fiscal.monthly)}</span>
                           </li>
                         )}
-                        {result.fiscal.grants.map((g) => (
+                        {cumulative.fiscal.grants.map((g) => (
                           <li key={g.year} className="flex justify-between text-caption">
                             <span className="text-deep">{g.year}.01.01</span>
                             <span className="tabular-nums">{fmtDays(g.days)}</span>
                           </li>
                         ))}
-                        {result.fiscal.total === 0 && <li className="text-caption text-mid">아직 부여된 연차가 없어요.</li>}
+                        {cumulative.fiscal.total === 0 && <li className="text-caption text-mid">아직 부여된 연차가 없어요.</li>}
                       </ul>
                     </div>
                   </div>
@@ -144,7 +163,7 @@ export default function SettlementPage() {
             )}
 
             <p className="text-micro leading-relaxed text-mid">
-              법정 기준(1년 미만 매월 1일·최대 11일, 1년마다 15일, 3년 이상 2년마다 1일 가산)으로 계산한 참고값이에요. 회사 규정이나 실제 정산과 다를 수 있고, 미사용 연차 수당 금액은 급여 정보가 필요해 다루지 않습니다.
+              법정 기준(1년 미만 매월 1일·최대 11일, 1년마다 15일, 3년 이상 2년마다 1일 가산)으로 계산한 참고값이에요. 전년도 미사용분 이월은 회사마다 달라 계산에 넣지 않았고, 수당 금액은 급여 정보가 필요해 다루지 않습니다.
             </p>
           </div>
         </div>
