@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useApp } from '@/store/AppContext'
 import { Button, Field, Input, Modal, MoneyInput } from '@/components/ui'
-import { tenureText } from '@/utils/date'
+import { fmtFull, fmtShort, tenureText } from '@/utils/date'
+import { accrualFor } from '@/utils/accrual'
 
 /**
  * 내 정보 — 상단 내비의 이름을 눌러 연다.
@@ -64,6 +65,9 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
   }
 
   const tenure = tenureText(joinDate)
+  // 입사일로 회계연도 기준 연차를 계산해 참고값으로 보여준다
+  const accrual = accrualFor(joinDate, settings.year)
+  const applied = accrual !== null && Number(totalLeave) === accrual.total
 
   return (
     <Modal open={open} onClose={onClose} title="내 정보">
@@ -102,6 +106,29 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
               </div>
             </Field>
           </div>
+
+          {accrual && (
+            <div className="mt-3 rounded-[16px] bg-canvas px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-caption text-deep">
+                  입사일 기준 <span className="font-medium text-ink">{accrual.total}일</span>
+                  <span className="text-mid"> · {accrual.note}</span>
+                </p>
+                {!applied && (
+                  <button type="button" onClick={() => setTotalLeave(String(accrual.total))} className="shrink-0 text-caption text-link hover:underline">
+                    적용
+                  </button>
+                )}
+              </div>
+              {accrual.nextMonthlyDate && (
+                <p className="mt-1 text-micro text-mid">
+                  다음 월차 {fmtShort(accrual.nextMonthlyDate)}에 +1일
+                  {accrual.monthlyExpiresAt && ` · 월차는 입사 1주년 ${fmtFull(accrual.monthlyExpiresAt)}까지 써야 해요`}
+                </p>
+              )}
+              <p className="mt-1 text-micro text-mid">회계연도(1/1) 기준으로 계산한 참고값이에요. 회사 계산과 다르면 직접 고치세요.</p>
+            </div>
+          )}
         </div>
 
         <p className="text-micro text-mid">급여·평가 등 민감정보는 입력하지 않습니다. 입력한 값은 이 브라우저에만 저장돼요.</p>

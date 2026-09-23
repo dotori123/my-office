@@ -4,7 +4,8 @@ import type { Leave } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
 import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
-import { fmtShort, today, weekdayKo } from '@/utils/date'
+import { fmtShort, fmtFull, today, weekdayKo } from '@/utils/date'
+import { accrualFor } from '@/utils/accrual'
 import { fmtDays } from '@/utils/format'
 import { leaveLabel, summarizeLeaves } from '@/utils/leave'
 import LeaveForm from './LeaveForm'
@@ -71,7 +72,7 @@ export default function LeavePage() {
       </Band>
 
       <Band tone="gray">
-        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} />}
+        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} accrual={accrualFor(state.user.joinDate, settings.year)} />}
         {tab === 'history' && (
           <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={setRemoving} />
         )}
@@ -92,7 +93,15 @@ export default function LeavePage() {
 }
 
 /* ---------- 연차 현황 ---------- */
-function StatusTab({ summary, leaves }: { summary: ReturnType<typeof summarizeLeaves>; leaves: Leave[] }) {
+function StatusTab({
+  summary,
+  leaves,
+  accrual,
+}: {
+  summary: ReturnType<typeof summarizeLeaves>
+  leaves: Leave[]
+  accrual: ReturnType<typeof accrualFor>
+}) {
   const base = today()
   const upcoming = leaves.filter((l) => l.startDate > base).sort((a, b) => a.startDate.localeCompare(b.startDate))
 
@@ -123,6 +132,19 @@ function StatusTab({ summary, leaves }: { summary: ReturnType<typeof summarizeLe
         </div>
         {summary.familyDays > 0 && (
           <p className="mt-4 text-caption text-mid">경조휴가 {summary.familyDays}일은 연차와 별개라 여기에 포함하지 않았어요.</p>
+        )}
+
+        {/* 입사 1년 미만이면 연차가 매달 늘어난다 */}
+        {accrual?.nextMonthlyDate && (
+          <div className="mt-4 rounded-[16px] bg-canvas px-4 py-3">
+            <p className="text-caption text-deep">
+              입사 1년 미만이라 <span className="font-medium text-ink">매달 만근할 때마다 1일</span>씩 늘어요.
+            </p>
+            <p className="mt-1 text-micro text-mid">
+              지금까지 월차 {accrual.monthly}일 · 다음 {fmtShort(accrual.nextMonthlyDate)}에 +1일
+              {accrual.monthlyExpiresAt && ` · 입사 1주년 ${fmtFull(accrual.monthlyExpiresAt)}까지 써야 소멸되지 않아요`}
+            </p>
+          </div>
         )}
       </Card>
 
