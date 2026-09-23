@@ -23,6 +23,8 @@ export default function SettlementPage() {
   const { user, leaves } = state
   const [joinDate, setJoinDate] = useState(user.joinDate)
   const [leaveDate, setLeaveDate] = useState(today())
+  /** 연도별 부여 내역은 평소엔 접어 둔다 — 위의 '남은 연차'와 헷갈리기 쉬워서 */
+  const [showGrants, setShowGrants] = useState(false)
 
   const leaveYear = Number(leaveDate.slice(0, 4))
 
@@ -100,8 +102,8 @@ export default function SettlementPage() {
                   </p>
                 </Card>
 
-                {/* 2. 법정 미달 확인 — 누적 비교 */}
-                <Card eyebrow="입사일 기준으로 다시 계산하면" title={`누적 ${fmtDays(cumulative.legal.total)} / 회계연도 기준 ${fmtDays(cumulative.fiscal.total)}`}>
+                {/* 2. 법정 미달 확인 — 누적 비교. 결론만 보이고 내역은 접어 둔다 */}
+                <Card eyebrow="퇴사할 때 다시 계산하면" title={`입사일 기준 누적 ${fmtDays(cumulative.legal.total)} / 회계연도 기준 ${fmtDays(cumulative.fiscal.total)}`}>
                   <div className={cx('rounded-[16px] px-4 py-3', cumulative.diff > 0 ? 'bg-starlight' : 'bg-canvas')}>
                     {cumulative.diff > 0 ? (
                       <p className="text-caption text-deep">
@@ -114,12 +116,36 @@ export default function SettlementPage() {
                     ) : (
                       <p className="text-caption text-deep">두 기준의 누적 일수가 같아요.</p>
                     )}
-                    <p className="mt-1 text-micro text-mid">입사한 날부터 퇴사일까지 발생한 일수를 모두 더해 견준 값이에요. 위의 남은 연차와는 다른 이야기예요.</p>
+                    <p className="mt-1 text-micro text-mid">
+                      입사한 날부터 퇴사일까지 발생한 일수를 모두 더해 견준 값이에요. 위의 남은 연차와는 다른 이야기예요.
+                    </p>
                   </div>
 
-                  <div className="mt-5 grid gap-6 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGrants((v) => !v)}
+                    aria-expanded={showGrants}
+                    className="mt-4 flex items-center gap-1 text-caption text-mid transition-colors hover:text-ink"
+                  >
+                    연도별 내역 {showGrants ? '접기' : '보기'}
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={cx('shrink-0 transition-transform', showGrants && 'rotate-180')}
+                    >
+                      <path d="M3 4.5l3 3 3-3" />
+                    </svg>
+                  </button>
+
+                  <div className={cx('mt-4 grid gap-6 sm:grid-cols-2', !showGrants && 'hidden')}>
                     <div>
-                      <p className="mb-2 text-caption text-mid">입사일 기준</p>
+                      <p className="mb-2 text-caption text-mid">입사일 기준 (1주년마다)</p>
                       <ul className="space-y-1.5">
                         {cumulative.legal.monthly > 0 && (
                           <li className="flex justify-between text-caption">
@@ -140,7 +166,7 @@ export default function SettlementPage() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-caption text-mid">회계연도 기준</p>
+                      <p className="mb-2 text-caption text-mid">회계연도 기준 (매년 1/1)</p>
                       <ul className="space-y-1.5">
                         {cumulative.fiscal.monthly > 0 && (
                           <li className="flex justify-between text-caption">
