@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout'
 import ScrollToTop from '@/components/layout/ScrollToTop'
 import DashboardPage from '@/pages/DashboardPage'
 import LeavePage from '@/pages/leave/LeavePage'
+import SettlementPage from '@/pages/leave/SettlementPage'
 import BenefitPage from '@/pages/benefit/BenefitPage'
 import CalendarPage from '@/pages/calendar/CalendarPage'
 import ProjectPage from '@/pages/project/ProjectPage'
@@ -30,6 +31,8 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<DashboardPage />} />
             <Route path="leave" element={<LeavePage />} />
+            {/* 내비에 없는 페이지 — 주소로만 들어간다 */}
+            <Route path="leave/settlement" element={<SettlementPage />} />
             <Route path="benefit" element={<BenefitPage />} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="projects" element={<ProjectPage />} />

@@ -4,11 +4,11 @@ import { diffDays, fromKey, toKey, today } from './date'
  * 회계연도(1/1) 기준 연차 발생 계산.
  *
  * - 입사 1년 미만: 매월 만근할 때마다 1일 ('월차'). 최대 11일이고 입사 1주년에 소멸한다
- * - 입사 다음 해 1/1: 전년도 재직 기간에 비례해 부여 (15일 × 재직일수 / 365)
+ * - 입사 다음 해 1/1: 전년도 재직 기간에 비례해 부여 (15일 × 재직일수 / 365, 올림)
  * - 그 다음 회계연도부터: 15일. 회계연도가 시작될 때 근속 3년 이상이면 2년마다 1일씩 가산 (최대 25일)
  *
- * 회사마다 비례분을 올리거나 버리는 방식이 달라 계산값은 참고용이고,
- * 내 정보에서 직접 고칠 수 있게 두었다.
+ * 비례분은 근로자에게 불리하지 않게 올리는 곳이 많아 올림으로 두었다.
+ * 회사마다 다를 수 있어 계산값은 참고용이고, 내 정보에서 직접 고칠 수 있다.
  */
 
 /** 법정 기본 연차 */
@@ -84,7 +84,8 @@ const annualGrant = (joinDate: string, year: number) => {
   // 입사 다음 해 1/1 — 전년도 재직 기간에 비례
   if (year === joinYear + 1) {
     const worked = diffDays(joinDate, `${joinYear}-12-31`) + 1
-    return Math.round(((BASE_DAYS * worked) / 365) * 10) / 10
+    // 윤년(366일)이면 비율이 1을 넘으므로 기본 일수로 막는다
+    return Math.min(BASE_DAYS, Math.ceil((BASE_DAYS * worked) / 365))
   }
 
   // 그 다음부터는 15일 + 가산 (회계연도가 시작될 때의 근속 기준)
@@ -125,6 +126,51 @@ export const accrualFor = (joinDate: string, year: number, base = today()): Accr
     nextMonthlyDate: next,
     monthlyExpiresAt: inFirstYear ? anniversary : undefined,
     note: parts.join(' + ') || '아직 발생한 연차가 없어요',
+  }
+}
+
+/** 근속 n년차에 부여되는 연차. 3년 이상부터 2년마다 1일씩 가산 */
+const daysForYear = (n: number) => Math.min(MAX_DAYS, BASE_DAYS + (n >= 3 ? Math.floor((n - 1) / 2) : 0))
+
+export interface Settlement {
+  /** 입사일 기준으로 다시 계산한 발생 연차 (퇴사 정산 기준) */
+  legal: { monthly: number; annual: number; total: number; grants: { date: string; days: number }[] }
+  /** 회계연도 기준으로 실제 부여받은 연차 */
+  fiscal: { monthly: number; annual: number; total: number; grants: { year: number; days: number }[] }
+  /** 입사일 기준 − 회계연도 기준. 양수면 덜 받은 것, 음수면 더 받은 것 */
+  diff: number
+}
+
+/**
+ * 퇴사할 때의 연차 재정산.
+ * 회계연도 기준으로 받아 온 연차와, 입사일 기준으로 다시 계산한 연차를 견줘 차이를 낸다.
+ */
+export const settlementFor = (joinDate: string, leaveDate: string): Settlement | null => {
+  if (!joinDate || !leaveDate || leaveDate < joinDate) return null
+
+  // 입사일 기준 — 1년 미만 월차 + 매 주년마다 부여
+  const monthly = monthlyAccrued(joinDate, leaveDate)
+  const grants: { date: string; days: number }[] = []
+  for (let n = 1; ; n++) {
+    const d = addMonths(joinDate, 12 * n)
+    if (d > leaveDate) break
+    grants.push({ date: d, days: daysForYear(n) })
+  }
+  const legalAnnual = grants.reduce((s, g) => s + g.days, 0)
+
+  // 회계연도 기준 — 입사한 해부터 퇴사한 해까지 1/1 에 부여된 것
+  const fiscalGrants: { year: number; days: number }[] = []
+  for (let y = Number(joinDate.slice(0, 4)); y <= Number(leaveDate.slice(0, 4)); y++) {
+    const days = annualGrant(joinDate, y)
+    if (days > 0) fiscalGrants.push({ year: y, days })
+  }
+  const fiscalAnnual = fiscalGrants.reduce((s, g) => s + g.days, 0)
+
+  const round = (n: number) => Math.round(n * 100) / 100
+  return {
+    legal: { monthly, annual: legalAnnual, total: round(monthly + legalAnnual), grants },
+    fiscal: { monthly, annual: fiscalAnnual, total: round(monthly + fiscalAnnual), grants: fiscalGrants },
+    diff: round(legalAnnual - fiscalAnnual),
   }
 }
 
