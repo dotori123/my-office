@@ -129,6 +129,38 @@ export const accrualFor = (joinDate: string, year: number, base = today()): Accr
   }
 }
 
+export interface NextRaise {
+  /** 늘어나는 회계연도 */
+  year: number
+  /** 그때 받는 일수 */
+  days: number
+  /** 지금 받는 일수 */
+  from: number
+  reason: string
+}
+
+/**
+ * 다음에 연차가 늘어나는 시점.
+ * 회계연도 기준이라 근속 3년을 넘겨도 가산은 그 다음 1/1 에 반영된다.
+ * 이미 상한(25일)이면 없다.
+ */
+export const nextRaise = (joinDate: string, year: number): NextRaise | null => {
+  if (!joinDate) return null
+  const from = annualGrant(joinDate, year)
+  for (let y = year + 1; y <= year + 30; y++) {
+    const days = annualGrant(joinDate, y)
+    if (days <= from) continue
+    const reason =
+      from === 0
+        ? '전년도 재직 기간에 비례한 첫 연차'
+        : days >= BASE_DAYS && from < BASE_DAYS
+          ? '비례분이 끝나고 온전히 받는 첫 해'
+          : `근속 ${tenureYears(joinDate, `${y}-01-01`)}년 가산`
+    return { year: y, days, from, reason }
+  }
+  return null
+}
+
 /** 근속 n년차에 부여되는 연차. 3년 이상부터 2년마다 1일씩 가산 */
 const daysForYear = (n: number) => Math.min(MAX_DAYS, BASE_DAYS + (n >= 3 ? Math.floor((n - 1) / 2) : 0))
 

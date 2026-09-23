@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useApp } from '@/store/AppContext'
 import { Button, Field, Input, Modal, MoneyInput } from '@/components/ui'
 import { fmtFull, fmtShort, tenureText } from '@/utils/date'
-import { accrualFor } from '@/utils/accrual'
+import { accrualFor, nextRaise } from '@/utils/accrual'
 
 /**
  * 내 정보 — 상단 내비의 이름을 눌러 연다.
@@ -67,6 +67,7 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
   const tenure = tenureText(joinDate)
   // 입사일로 회계연도 기준 연차를 계산해 참고값으로 보여준다
   const accrual = accrualFor(joinDate, settings.year)
+  const raise = nextRaise(joinDate, settings.year)
   const applied = accrual !== null && Number(totalLeave) === accrual.total
 
   return (
@@ -124,6 +125,11 @@ function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void })
                 <p className="mt-1 text-micro text-mid">
                   다음 월차 {fmtShort(accrual.nextMonthlyDate)}에 +1일
                   {accrual.monthlyExpiresAt && ` · 월차는 입사 1주년 ${fmtFull(accrual.monthlyExpiresAt)}까지 써야 해요`}
+                </p>
+              )}
+              {raise && (
+                <p className="mt-1 text-micro text-mid">
+                  {fmtFull(`${raise.year}-01-01`)}에 {raise.days}일로 늘어요 · {raise.reason}
                 </p>
               )}
               <p className="mt-1 text-micro text-mid">회계연도(1/1) 기준으로 계산한 참고값이에요. 회사 계산과 다르면 직접 고치세요.</p>

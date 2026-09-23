@@ -5,7 +5,7 @@ import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
 import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
 import { fmtShort, fmtFull, today, weekdayKo } from '@/utils/date'
-import { accrualFor } from '@/utils/accrual'
+import { accrualFor, nextRaise } from '@/utils/accrual'
 import { fmtDays } from '@/utils/format'
 import { leaveLabel, summarizeLeaves } from '@/utils/leave'
 import LeaveForm from './LeaveForm'
@@ -72,7 +72,14 @@ export default function LeavePage() {
       </Band>
 
       <Band tone="gray">
-        {tab === 'status' && <StatusTab summary={summary} leaves={leaves} accrual={accrualFor(state.user.joinDate, settings.year)} />}
+        {tab === 'status' && (
+          <StatusTab
+            summary={summary}
+            leaves={leaves}
+            accrual={accrualFor(state.user.joinDate, settings.year)}
+            raise={nextRaise(state.user.joinDate, settings.year)}
+          />
+        )}
         {tab === 'history' && (
           <HistoryTab leaves={leaves} onEdit={openEdit} onRemove={setRemoving} />
         )}
@@ -97,10 +104,12 @@ function StatusTab({
   summary,
   leaves,
   accrual,
+  raise,
 }: {
   summary: ReturnType<typeof summarizeLeaves>
   leaves: Leave[]
   accrual: ReturnType<typeof accrualFor>
+  raise: ReturnType<typeof nextRaise>
 }) {
   const base = today()
   const upcoming = leaves.filter((l) => l.startDate > base).sort((a, b) => a.startDate.localeCompare(b.startDate))
@@ -132,6 +141,13 @@ function StatusTab({
         </div>
         {summary.familyDays > 0 && (
           <p className="mt-4 text-caption text-mid">경조휴가 {summary.familyDays}일은 연차와 별개라 여기에 포함하지 않았어요.</p>
+        )}
+
+        {/* 회계연도 기준이라 근속 3년을 넘겨도 가산은 다음 1/1 에 반영된다 */}
+        {raise && (
+          <p className="mt-4 text-caption text-mid">
+            <span className="text-ink">{fmtFull(`${raise.year}-01-01`)}</span>에 {raise.days}일로 늘어요 · {raise.reason}
+          </p>
         )}
 
         {/* 입사 1년 미만이면 연차가 매달 늘어난다 */}
