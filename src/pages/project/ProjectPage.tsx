@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import type { Project } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
-import { Band, Button, Card, ConfirmDialog, EmptyState, Input, PageHero } from '@/components/ui'
+import { Band, Button, Card, ConfirmDialog, DragHandle, EmptyState, Input, PageHero, cx } from '@/components/ui'
+import { useDragList } from '@/hooks/useDragList'
 import ProjectCard from './ProjectCard'
 import ProjectForm from './ProjectForm'
 
@@ -19,13 +20,23 @@ export default function ProjectPage() {
   const [q, setQ] = useState('')
   const [removing, setRemoving] = useState<Project | null>(null)
 
-  // 고정 → 이름순
+  const ordered = useMemo(() => [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [projects])
+
   const list = useMemo(() => {
     const kw = q.trim().toLowerCase()
-    return [...projects]
-      .filter((p) => !kw || p.name.toLowerCase().includes(kw) || p.links.some((l) => l.label.toLowerCase().includes(kw) || l.url.toLowerCase().includes(kw)))
-      .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || a.name.localeCompare(b.name, 'ko'))
-  }, [projects, q])
+    if (!kw) return ordered
+    return ordered.filter(
+      (p) => p.name.toLowerCase().includes(kw) || p.links.some((l) => l.label.toLowerCase().includes(kw) || l.url.toLowerCase().includes(kw)),
+    )
+  }, [ordered, q])
+
+  // 검색 중에는 보이는 차례와 실제 순서가 달라 헷갈리므로 끄기
+  const canReorder = !q.trim() && ordered.length > 1
+  const drag = useDragList(
+    ordered.map((p) => p.id),
+    (ids) => dispatch({ type: 'project/reorder', ids }),
+    canReorder,
+  )
 
   const openNew = () => {
     setEditing(null)
@@ -59,23 +70,33 @@ export default function ProjectPage() {
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {list.map((p) => (
-              <ProjectCard
+              <div
                 key={p.id}
-                project={p}
-                action={
-                  <div className="flex shrink-0 gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => togglePin(p)}>
-                      {p.pinned ? '고정 해제' : '고정'}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
-                      수정
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => setRemoving(p)}>
-                      삭제
-                    </Button>
-                  </div>
-                }
-              />
+                {...drag.itemProps(p.id)}
+                className={cx(
+                  'rounded-card transition-all',
+                  drag.draggingId === p.id && 'opacity-40',
+                  drag.overId === p.id && drag.draggingId !== p.id && 'ring-2 ring-blue',
+                )}
+              >
+                <ProjectCard
+                  project={p}
+                  action={
+                    <div className="flex shrink-0 items-center gap-1">
+                      {canReorder && <DragHandle {...drag.handleProps(p.id)} />}
+                      <Button variant="ghost" size="sm" onClick={() => togglePin(p)}>
+                        {p.pinned ? '고정 해제' : '고정'}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
+                        수정
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => setRemoving(p)}>
+                        삭제
+                      </Button>
+                    </div>
+                  }
+                />
+              </div>
             ))}
           </div>
         )}

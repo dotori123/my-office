@@ -100,5 +100,7 @@ export interface Project {
   description?: string
   /** Dashboard 에 노출 */
   pinned?: boolean
+  /** 목록에서의 순서. 직접 끌어서 바꾼다 */
+  order?: number
   links: ProjectLink[]
 }

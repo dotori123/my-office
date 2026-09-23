@@ -32,6 +32,7 @@ type Action =
   | { type: 'project/add'; payload: Omit<Project, 'id' | 'userId'> }
   | { type: 'project/update'; payload: Project }
   | { type: 'project/remove'; id: string }
+  | { type: 'project/reorder'; ids: string[] }
   | { type: 'user/update'; payload: Partial<User> }
   | { type: 'settings/update'; payload: Partial<Settings> }
   | { type: 'reset' }
@@ -97,12 +98,21 @@ function reducer(state: AppState, action: Action): AppState {
     case 'event/remove':
       return { ...state, events: state.events.filter((e) => e.id !== action.id) }
 
-    case 'project/add':
-      return { ...state, projects: [...state.projects, { ...action.payload, id: uid(), userId: state.user.id }] }
+    case 'project/add': {
+      const order = Math.max(-1, ...state.projects.map((p) => p.order ?? -1)) + 1
+      return { ...state, projects: [...state.projects, { order, ...action.payload, id: uid(), userId: state.user.id }] }
+    }
     case 'project/update':
       return { ...state, projects: state.projects.map((p) => (p.id === action.payload.id ? action.payload : p)) }
     case 'project/remove':
       return { ...state, projects: state.projects.filter((p) => p.id !== action.id) }
+    case 'project/reorder': {
+      const rank = new Map(action.ids.map((id, i) => [id, i]))
+      return {
+        ...state,
+        projects: state.projects.map((p) => (rank.has(p.id) ? { ...p, order: rank.get(p.id) } : p)),
+      }
+    }
 
     case 'user/update':
       return { ...state, user: { ...state.user, ...action.payload } }
@@ -117,15 +127,27 @@ function reducer(state: AppState, action: Action): AppState {
 
 const LEGACY_KEYS = ['my-office:v1'] // 예시 더미 데이터가 들어있던 이전 버전
 
+/** 순서를 정한 적 없는 프로젝트에 지금 보이는 차례대로 번호를 매긴다 (고정 → 이름순) */
+const withOrder = (projects: Project[]): Project[] => {
+  if (projects.every((p) => p.order != null)) return projects
+  const ranked = [...projects].sort(
+    (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || a.name.localeCompare(b.name, 'ko'),
+  )
+  return projects.map((p) => ({ ...p, order: p.order ?? ranked.indexOf(p) }))
+}
+
 const load = (): AppState => {
   try {
     LEGACY_KEYS.forEach((k) => localStorage.removeItem(k))
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...initialState, ...(JSON.parse(raw) as Partial<AppState>) }
+    if (raw) {
+      const saved = { ...initialState, ...(JSON.parse(raw) as Partial<AppState>) }
+      return { ...saved, projects: withOrder(saved.projects) }
+    }
   } catch {
     /* 저장 데이터가 깨진 경우 초기 상태로 복구 */
   }
-  return initialState
+  return { ...initialState, projects: withOrder(initialState.projects) }
 }
 
 interface AppContextValue {

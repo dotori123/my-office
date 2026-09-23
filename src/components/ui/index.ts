@@ -11,6 +11,7 @@ export { PageHero } from './PageHero'
 
 // 액션
 export { Button } from './Button'
+export { DragHandle } from './DragHandle'
 export { ArrowLink } from './ArrowLink'
 export { Tabs } from './Tabs'
 

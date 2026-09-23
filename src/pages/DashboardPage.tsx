@@ -35,8 +35,10 @@ export default function DashboardPage() {
     .join(' · ')
 
   const pinnedProjects = useMemo(() => {
-    const pinned = projects.filter((p) => p.pinned)
-    return (pinned.length ? pinned : projects).slice(0, 3)
+    // 프로젝트 페이지에서 정한 순서를 그대로 따른다
+    const ordered = [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    const pinned = ordered.filter((p) => p.pinned)
+    return (pinned.length ? pinned : ordered).slice(0, 3)
   }, [projects])
 
   const leave = summarizeLeaves(leaves, settings.totalLeave)

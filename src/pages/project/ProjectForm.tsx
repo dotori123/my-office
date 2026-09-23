@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { LINK_KINDS, LINK_KIND_LABEL, type LinkKind, type Project, type ProjectLink } from '@/types'
 import { useApp } from '@/store/AppContext'
-import { Button, Field, Input, Modal, Select } from '@/components/ui'
+import { Button, DragHandle, Field, Input, Modal, Select, cx } from '@/components/ui'
+import { useDragList } from '@/hooks/useDragList'
 import { uid } from '@/utils/format'
 
 interface Props {
@@ -41,6 +42,13 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
   const updateLink = (id: string, patch: Partial<ProjectLink>) => setLinks((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)))
   const removeLink = (id: string) => setLinks((ls) => ls.filter((l) => l.id !== id))
 
+  // 링크는 배열 차례대로 보이므로 배열만 바꾸면 된다
+  const drag = useDragList(
+    links.map((l) => l.id),
+    (ids) => setLinks((ls) => ids.map((id) => ls.find((l) => l.id === id)!)),
+    links.length > 1,
+  )
+
   const submit = () => {
     const cleaned = links
       .map((l) => ({ ...l, label: l.label.trim() || LINK_KIND_LABEL[l.kind], url: normalizeUrl(l.url) }))
@@ -70,7 +78,16 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
           </div>
           <div className="space-y-2">
             {links.map((l) => (
-              <div key={l.id} className="grid grid-cols-[92px_1fr_auto] gap-2 rounded-[16px] bg-canvas p-2">
+              <div
+                key={l.id}
+                {...drag.itemProps(l.id)}
+                className={cx(
+                  'grid grid-cols-[auto_92px_1fr_auto] items-center gap-2 rounded-[16px] bg-canvas p-2 transition-all',
+                  drag.draggingId === l.id && 'opacity-40',
+                  drag.overId === l.id && drag.draggingId !== l.id && 'ring-2 ring-blue',
+                )}
+              >
+                {links.length > 1 ? <DragHandle {...drag.handleProps(l.id)} /> : <span />}
                 <Select value={l.kind} onChange={(e) => updateLink(l.id, { kind: e.target.value as LinkKind })} className="px-2 py-2 text-caption">
                   {LINK_KINDS.map((k) => (
                     <option key={k} value={k}>
@@ -82,14 +99,16 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
                   <Input placeholder="표시 이름 (비우면 종류명)" value={l.label} onChange={(e) => updateLink(l.id, { label: e.target.value })} className="py-2 text-caption" />
                   <Input placeholder="https://" value={l.url} onChange={(e) => updateLink(l.id, { url: e.target.value })} className="py-2 text-caption" />
                 </div>
-                <button type="button" onClick={() => removeLink(l.id)} className="self-center px-1 text-caption text-mid hover:text-ink" aria-label="링크 삭제">
+                <button type="button" onClick={() => removeLink(l.id)} className="px-1 text-caption text-mid hover:text-ink" aria-label="링크 삭제">
                   ✕
                 </button>
               </div>
             ))}
             {links.length === 0 && <p className="py-2 text-caption text-mid">링크를 추가해 보세요.</p>}
           </div>
-          <p className="mt-1.5 text-micro text-mid">URL 이 비어 있는 행은 저장되지 않습니다.</p>
+          <p className="mt-1.5 text-micro text-mid">
+            URL 이 비어 있는 행은 저장되지 않습니다.{links.length > 1 && ' 손잡이를 끌어 순서를 바꿀 수 있어요.'}
+          </p>
         </div>
 
         <label className="flex items-center gap-2 text-body-sm">
