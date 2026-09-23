@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Project } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Badge, Button, Modal, cx } from '@/components/ui'
-import { LINK_KIND_LABEL } from '@/types'
+import { linkKindLabel, sameAsKindLabel } from '@/types'
 import { parseProjects } from '@/utils/parseProjects'
-import { KIND_STYLE } from './ProjectCard'
+import { kindStyle } from './ProjectCard'
 
 const PLACEHOLDER = `메모장이나 위키에서 프로젝트 목록을 복사해서 붙여넣으세요.
 주소가 없는 줄은 프로젝트 이름, 주소가 있는 줄은 그 프로젝트의 링크로 읽어요.
@@ -109,9 +109,8 @@ export default function ProjectImport({ open, onClose }: { open: boolean; onClos
                       {r.links.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5 pl-6.5">
                           {r.links.map((l) => (
-                            <Badge key={l.id} className={KIND_STYLE[l.kind]}>
-                              {/* 종류 이름과 링크 이름이 같으면 한 번만 */}
-                              {LINK_KIND_LABEL[l.kind] === l.label ? l.label : `${LINK_KIND_LABEL[l.kind]} · ${l.label}`}
+                            <Badge key={l.id} className={kindStyle(l.kind)}>
+                              {l.label && !sameAsKindLabel(l.label, l.kind) ? `${linkKindLabel(l.kind)} · ${l.label}` : linkKindLabel(l.kind)}
                             </Badge>
                           ))}
                         </div>

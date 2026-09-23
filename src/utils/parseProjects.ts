@@ -1,4 +1,4 @@
-import { LINK_KINDS, LINK_KIND_LABEL, type LinkKind, type ProjectLink } from '@/types'
+import { LINK_KINDS, LINK_KIND_LABEL, linkKindLabel, sameAsKindLabel, type LinkKind, type ProjectLink } from '@/types'
 
 /**
  * 메모장·위키에서 복사한 프로젝트 목록을 프로젝트와 링크로 읽는다.
@@ -84,7 +84,8 @@ export function parseProjects(text: string): ProjectParseResult {
       skipped.push(line)
       continue
     }
-    current.links.push({ id: uid(), kind, label: label || LINK_KIND_LABEL[kind], url })
+    // 분류와 겹치는 이름은 남겨둘 필요가 없다
+    current.links.push({ id: uid(), kind, label: sameAsKindLabel(label, kind) ? '' : label, url })
   }
 
   // 링크도 이름도 없는 껍데기는 버린다
@@ -92,4 +93,4 @@ export function parseProjects(text: string): ProjectParseResult {
 }
 
 /** 미리보기에서 종류를 바꿀 때 쓸 목록 */
-export { LINK_KINDS, LINK_KIND_LABEL }
+export { LINK_KINDS, LINK_KIND_LABEL, linkKindLabel }

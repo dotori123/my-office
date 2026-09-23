@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LINK_KINDS, LINK_KIND_LABEL, type LinkKind, type Project, type ProjectLink } from '@/types'
+import { LINK_KINDS, LINK_KIND_LABEL, linkKindLabel, type LinkKind, type Project, type ProjectLink } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { Button, DragHandle, Field, Input, Modal, Select, cx } from '@/components/ui'
 import { useDragList } from '@/hooks/useDragList'
@@ -12,6 +12,9 @@ interface Props {
 }
 
 const emptyLink = (kind: LinkKind = 'test'): ProjectLink => ({ id: uid(), kind, label: '', url: '' })
+
+/** 기본 제공 분류인지 — 아니면 직접 입력한 것으로 본다 */
+const isPreset = (kind: string) => (LINK_KINDS as readonly string[]).includes(kind) && kind !== 'etc'
 
 /**
  * 'example.com' 처럼 스킴이 없으면 https:// 를 붙인다.
@@ -51,7 +54,7 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
 
   const submit = () => {
     const cleaned = links
-      .map((l) => ({ ...l, label: l.label.trim() || LINK_KIND_LABEL[l.kind], url: normalizeUrl(l.url) }))
+      .map((l) => ({ ...l, kind: l.kind.trim() || 'etc', label: l.label.trim(), url: normalizeUrl(l.url) }))
       .filter((l) => l.url)
     const payload = { name: name.trim(), description: description.trim() || undefined, pinned, links: cleaned }
     if (initial) dispatch({ type: 'project/update', payload: { ...initial, ...payload } })
@@ -88,15 +91,27 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
                 )}
               >
                 {links.length > 1 ? <DragHandle {...drag.handleProps(l.id)} /> : <span />}
-                <Select value={l.kind} onChange={(e) => updateLink(l.id, { kind: e.target.value as LinkKind })} className="px-2 py-2 text-caption">
+                <Select
+                  value={isPreset(l.kind) ? l.kind : 'etc'}
+                  onChange={(e) => updateLink(l.id, { kind: e.target.value === 'etc' ? '' : e.target.value })}
+                  className="px-2 py-2 text-caption"
+                >
                   {LINK_KINDS.map((k) => (
                     <option key={k} value={k}>
-                      {LINK_KIND_LABEL[k]}
+                      {k === 'etc' ? '기타 (직접 입력)' : LINK_KIND_LABEL[k]}
                     </option>
                   ))}
                 </Select>
                 <div className="space-y-1.5">
-                  <Input placeholder="표시 이름 (비우면 종류명)" value={l.label} onChange={(e) => updateLink(l.id, { label: e.target.value })} className="py-2 text-caption" />
+                  {!isPreset(l.kind) && (
+                    <Input
+                      placeholder="분류 이름 (비우면 '기타')"
+                      value={l.kind}
+                      onChange={(e) => updateLink(l.id, { kind: e.target.value })}
+                      className="py-2 text-caption"
+                    />
+                  )}
+                  <Input placeholder="꼬리표 (선택)" value={l.label} onChange={(e) => updateLink(l.id, { label: e.target.value })} className="py-2 text-caption" />
                   <Input placeholder="https://" value={l.url} onChange={(e) => updateLink(l.id, { url: e.target.value })} className="py-2 text-caption" />
                 </div>
                 <button type="button" onClick={() => removeLink(l.id)} className="px-1 text-caption text-mid hover:text-ink" aria-label="링크 삭제">
@@ -107,7 +122,8 @@ export default function ProjectForm({ open, onClose, initial }: Props) {
             {links.length === 0 && <p className="py-2 text-caption text-mid">링크를 추가해 보세요.</p>}
           </div>
           <p className="mt-1.5 text-micro text-mid">
-            URL 이 비어 있는 행은 저장되지 않습니다.{links.length > 1 && ' 손잡이를 끌어 순서를 바꿀 수 있어요.'}
+            URL 이 비어 있는 행은 저장되지 않습니다. 꼬리표는 같은 분류가 여러 개일 때만 쓰면 돼요 (예: {linkKindLabel('test')} · 관리자).
+            {links.length > 1 && ' 손잡이를 끌어 순서를 바꿀 수 있어요.'}
           </p>
         </div>
 

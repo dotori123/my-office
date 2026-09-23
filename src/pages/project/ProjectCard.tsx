@@ -1,8 +1,8 @@
-import { LINK_KIND_LABEL, type LinkKind, type Project } from '@/types'
+import { linkKindLabel, sameAsKindLabel, type LinkKind, type Project } from '@/types'
 import { Card, cx } from '@/components/ui'
 
 /** 링크 종류별 색 — product finish 파스텔 */
-export const KIND_STYLE: Record<LinkKind, string> = {
+export const KIND_STYLE: Record<string, string> = {
   test: 'bg-sky',
   prod: 'bg-citrus',
   wbs: 'bg-starlight',
@@ -12,17 +12,26 @@ export const KIND_STYLE: Record<LinkKind, string> = {
   etc: 'bg-wash',
 }
 
+/** 직접 입력한 분류는 기본색 */
+export const kindStyle = (kind: string) => KIND_STYLE[kind] ?? 'bg-wash'
+
 export function LinkPill({ kind, label, url }: { kind: LinkKind; label: string; url: string }) {
+  // 분류 이름과 겹치면 굳이 두 번 보여주지 않는다
+  const extra = label && !sameAsKindLabel(label, kind) ? label : ''
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
       title={url}
-      className={cx('inline-flex items-center gap-1.5 rounded-pill py-1.5 pl-2 pr-3 text-caption text-ink transition-opacity hover:opacity-80', KIND_STYLE[kind])}
+      className={cx(
+        'inline-flex items-center gap-1.5 rounded-pill py-1.5 pl-2 text-caption text-ink transition-opacity hover:opacity-80',
+        extra ? 'pr-3' : 'pr-2',
+        kindStyle(kind),
+      )}
     >
-      <span className="rounded-pill bg-paper/70 px-1.5 text-micro text-deep">{LINK_KIND_LABEL[kind]}</span>
-      {label}
+      <span className="rounded-pill bg-paper/70 px-1.5 text-micro text-deep">{linkKindLabel(kind)}</span>
+      {extra}
       <span aria-hidden className="text-mid">
         ↗
       </span>

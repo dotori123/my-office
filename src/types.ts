@@ -73,17 +73,31 @@ export interface Settings {
   totalBenefit: number
 }
 
+/** 기본 제공 분류. 직접 입력한 값도 쓸 수 있어 타입은 열어둔다 */
 export const LINK_KINDS = ['test', 'prod', 'wbs', 'repo', 'design', 'docs', 'etc'] as const
-export type LinkKind = (typeof LINK_KINDS)[number]
+export type LinkKind = string
 
-export const LINK_KIND_LABEL: Record<LinkKind, string> = {
-  test: '테스트',
-  prod: '운영',
+export const LINK_KIND_LABEL: Record<string, string> = {
+  test: '테스트 서버',
+  prod: '운영 서버',
   wbs: 'WBS',
   repo: '저장소',
   design: '디자인',
   docs: '문서',
   etc: '기타',
+}
+
+/** 배지에 쓸 이름. 직접 입력한 분류는 값 그대로 */
+export const linkKindLabel = (kind: string) => LINK_KIND_LABEL[kind] ?? kind
+
+/**
+ * 표시 이름이 분류 이름과 사실상 같은지.
+ * 예전에는 표시 이름을 비우면 분류 이름으로 채웠던 탓에 '테스트 서버 테스트'처럼 겹쳐 보인다.
+ * 띄어쓰기와 끝의 '서버'를 떼고 견줘서 그런 경우를 가린다.
+ */
+export const sameAsKindLabel = (label: string, kind: string) => {
+  const norm = (s: string) => s.replace(/\s/g, '').replace(/서버$/, '')
+  return norm(label) === norm(linkKindLabel(kind))
 }
 
 export interface ProjectLink {
