@@ -25,6 +25,9 @@ const COLOR = {
   accent: 0x0071e3, // 연휴
 }
 
+/** 화면 가로에 들어와야 하는 폭 — 격자(7칸 × 0.84배)에 기울기·여백을 더한 값 */
+const FIT_WIDTH = ((COLS - 1) * GAP + 1) * 0.84 * 1.2
+
 /** 파랑으로 띄울 타일 — 금·토·일로 이어지는 연휴 한 덩어리 */
 const HOLIDAY = [18, 19, 20]
 /** 더 옅게 둘 타일 — 앞뒤 달 */
@@ -119,6 +122,8 @@ export default function CalendarGrid({
     let pointerX = 0
     let pointerY = 0
     const onPointerMove = (e: PointerEvent) => {
+      // 터치는 스크롤하려고 누른 것이라 격자가 손가락 쪽으로 튀지 않게 뺀다
+      if (e.pointerType !== 'mouse') return
       const r = host.getBoundingClientRect()
       pointerX = ((e.clientX - r.left) / r.width - 0.5) * 2
       pointerY = ((e.clientY - r.top) / r.height - 0.5) * 2
@@ -131,8 +136,9 @@ export default function CalendarGrid({
       if (!w || !h) return
       renderer.setSize(w, h, false)
       camera.aspect = w / h
-      // 좁은 화면에서는 뒤로 물러나 격자가 잘리지 않게 한다
-      baseZ = w < 640 ? 21 : 15
+      // 세로로 긴 화면은 가로 시야가 좁다 — 격자 너비가 들어오는 거리까지 물러난다
+      const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+      baseZ = Math.max(15, FIT_WIDTH / (2 * halfTan * camera.aspect))
       camera.updateProjectionMatrix()
     }
     const observer = new ResizeObserver(resize)

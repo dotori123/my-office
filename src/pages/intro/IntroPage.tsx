@@ -354,7 +354,7 @@ export default function IntroPage() {
         </div>
 
         <Reveal delay={0.1}>
-          <div className="mt-14 grid gap-5 md:grid-cols-2">
+          <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2">
             <Card tone="gray">
               <p className="text-micro text-mid">붙여넣은 내용</p>
               <pre className="mt-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-deep">
@@ -384,7 +384,7 @@ export default function IntroPage() {
 
         {/* 지출결의서 — 세로로 나열된 건을 읽고 같은 항목을 합친다 */}
         <Reveal delay={0.1}>
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
             <Card tone="gray">
               <p className="text-micro text-mid">붙여넣은 지출결의서</p>
               <pre className="mt-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-deep">
