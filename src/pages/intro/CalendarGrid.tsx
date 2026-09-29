@@ -74,6 +74,10 @@ export default function CalendarGrid({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     host.appendChild(renderer.domElement)
     renderer.domElement.style.display = 'block'
+    // setSize(…, false) 는 CSS 크기를 건드리지 않는다 — 여기서 맞춰 두지 않으면
+    // 픽셀 비율이 2~3 인 폰에서 캔버스가 2~3배로 커져 격자가 화면 밖으로 밀려난다
+    renderer.domElement.style.width = '100%'
+    renderer.domElement.style.height = '100%'
 
     const board = new THREE.Group()
     // 화면 위쪽에 자리잡게 — 아래쪽은 문구 자리로 비워둔다
