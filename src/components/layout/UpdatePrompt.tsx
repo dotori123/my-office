@@ -16,13 +16,22 @@ export default function UpdatePrompt() {
 
   if (!needRefresh) return null
 
-  const refresh = () => {
+  const refresh = async () => {
     setReloading(true)
+    const reload = () => window.location.reload()
     // 새 서비스 워커가 페이지를 넘겨받으면 새로고침한다
-    navigator.serviceWorker?.addEventListener('controllerchange', () => window.location.reload(), { once: true })
-    void updateServiceWorker(true)
+    navigator.serviceWorker?.addEventListener('controllerchange', reload, { once: true })
+    // 기다리던 서비스 워커에 직접 "이제 넘겨받아"라고 알린다.
+    // 라이브러리에만 맡기면 신호가 안 가서, 새로고침해도 옛 버전이 다시 뜰 때가 있었다.
+    const waiting = (await navigator.serviceWorker?.getRegistration())?.waiting
+    if (waiting) {
+      waiting.addEventListener('statechange', () => waiting.state === 'activated' && reload())
+      waiting.postMessage({ type: 'SKIP_WAITING' })
+    } else {
+      void updateServiceWorker(true)
+    }
     // 넘겨받는 신호가 오지 않을 때도 있다 (페이지가 서비스 워커 없이 열린 경우 등) — 잠시 뒤 그냥 새로고침
-    setTimeout(() => window.location.reload(), 1500)
+    setTimeout(reload, 3000)
   }
 
   return (
@@ -31,7 +40,7 @@ export default function UpdatePrompt() {
         <span className="text-caption">새 버전이 준비됐어요.</span>
         <button
           type="button"
-          onClick={refresh}
+          onClick={() => void refresh()}
           disabled={reloading}
           className="text-caption font-medium underline underline-offset-2 disabled:no-underline disabled:opacity-60"
         >

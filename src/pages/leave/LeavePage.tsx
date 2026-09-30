@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import type { Leave } from '@/types'
 import { useApp } from '@/store/AppContext'
 import { useSeo } from '@/hooks/useSeo'
-import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, ProgressBar, Stat, Tabs, cx } from '@/components/ui'
+import { Badge, Band, Button, Card, ConfirmDialog, EmptyState, PageHero, Stat, Tabs, cx } from '@/components/ui'
+import { LeaveBar, LeaveBarLegend } from './LeaveBar'
 import { fmtShort, fmtFull, today, weekdayKo } from '@/utils/date'
 import { accrualFor, nextRaise } from '@/utils/accrual'
 import { fmtDays } from '@/utils/format'
@@ -133,8 +134,11 @@ function StatusTab({
           <p className="text-heading-sm font-bold tabular-nums md:text-heading-lg">{fmtDays(summary.remaining)}</p>
           <p className="text-body-sm text-mid">총 {fmtDays(summary.total)}</p>
         </div>
-        <ProgressBar value={summary.usageRate} className="mt-6 h-2.5" />
-        <p className="mt-2 text-right text-micro text-mid">사용률 {summary.usageRate}%</p>
+        <LeaveBar used={summary.used} planned={summary.planned} remaining={summary.remaining} className="mt-6 h-2.5" />
+        <p className="mt-2 flex justify-between text-micro text-mid">
+          <LeaveBarLegend planned={summary.planned} />
+          <span>사용률 {summary.usageRate}%</span>
+        </p>
         <div className="mt-6 grid grid-cols-3 gap-3">
           <Stat label="사용" value={fmtDays(summary.used)} />
           <Stat label="예정" value={fmtDays(summary.planned)} />

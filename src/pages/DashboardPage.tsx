@@ -10,6 +10,7 @@ import { leaveLabel, summarizeLeaves, yearEndOutlook } from '@/utils/leave'
 import { summarizeBenefits } from '@/utils/benefit'
 import { EVENT_STYLE, type UnifiedEvent } from '@/pages/calendar/eventStyle'
 import ProjectCard from '@/pages/project/ProjectCard'
+import { LeaveBar, LeaveBarLegend } from '@/pages/leave/LeaveBar'
 import { useOpenProfile } from '@/components/layout/ProfileModal'
 
 export default function DashboardPage() {
@@ -142,8 +143,11 @@ export default function DashboardPage() {
               사용 {fmtDays(leave.used)} / 총 {fmtDays(leave.total)}
               {leave.planned > 0 && ` · 예정 ${fmtDays(leave.planned)}`}
             </p>
-            <ProgressBar value={leave.usageRate} className="mt-6" />
-            <p className="mt-2 text-right text-micro text-mid">사용률 {leave.usageRate}%</p>
+            <LeaveBar used={leave.used} planned={leave.planned} remaining={leave.remaining} className="mt-6" />
+            <p className="mt-2 flex justify-between text-micro text-mid">
+              <LeaveBarLegend planned={leave.planned} />
+              <span>사용률 {leave.usageRate}%</span>
+            </p>
             {/* 연말이 가까우면 사라질 연차를 알려준다 — 12월엔 눈에 띄게 */}
             {outlook.show && (
               <p className={cx('mt-3 text-caption', outlook.level === 'urgent' ? 'font-medium text-ember' : 'text-mid')}>
