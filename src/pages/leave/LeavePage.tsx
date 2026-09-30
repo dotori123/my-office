@@ -136,7 +136,7 @@ function StatusTab({
         </div>
         <LeaveBar used={summary.used} planned={summary.planned} remaining={summary.remaining} className="mt-6 h-2.5" />
         <p className="mt-2 flex justify-between text-micro text-mid">
-          <LeaveBarLegend planned={summary.planned} />
+          <LeaveBarLegend planned={summary.planned} remaining={summary.remaining} />
           <span>사용률 {summary.usageRate}%</span>
         </p>
         <div className="mt-6 grid grid-cols-3 gap-3">

@@ -1,8 +1,9 @@
 import { cx } from '@/components/ui'
+import { yearEndOutcome } from '@/utils/leave'
 
 /**
- * 연차 바 — 사용 · 예정 · 잔여를 한 줄에 나눠 칠한다.
- * 남은 연차가 눈에 띄도록 잔여 칸만 파랗게.
+ * 연차 바 — 사용 · 예정 · 남은 연차를 한 줄에 나눠 칠한다.
+ * 남은 연차 중 연말에 수당으로 받을 수 있는 만큼은 파랗게 보여 준다.
  */
 export function LeaveBar({
   used,
@@ -15,11 +16,13 @@ export function LeaveBar({
   remaining: number
   className?: string
 }) {
+  const { payout, expire } = yearEndOutcome(remaining)
   const parts = [
-    { key: 'used', label: '사용', days: used, color: 'bg-ink' },
-    { key: 'planned', label: '예정', days: planned, color: 'bg-ink/30' },
-    { key: 'remaining', label: '잔여', days: remaining, color: 'bg-blue' },
-  ].map((p) => ({ ...p, days: Math.max(0, p.days) }))
+    { key: 'used', label: '사용', days: Math.max(0, used), color: 'bg-ink' },
+    { key: 'planned', label: '예정', days: Math.max(0, planned), color: 'bg-ink/30' },
+    { key: 'expire', label: '남음', days: expire, color: 'bg-transparent' },
+    { key: 'payout', label: '수당 가능', days: payout, color: 'bg-blue' },
+  ]
   const sum = parts.reduce((s, p) => s + p.days, 0)
 
   return (
@@ -41,11 +44,11 @@ export function LeaveBar({
 }
 
 /** 바 아래 색 설명 */
-export function LeaveBarLegend({ planned }: { planned: number }) {
+export function LeaveBarLegend({ planned, remaining }: { planned: number; remaining: number }) {
   const items = [
     { label: '사용', color: 'bg-ink' },
     ...(planned > 0 ? [{ label: '예정', color: 'bg-ink/30' }] : []),
-    { label: '잔여', color: 'bg-blue' },
+    ...(remaining > 0 ? [{ label: '수당 가능', color: 'bg-blue' }] : []),
   ]
   return (
     <span className="flex items-center gap-3">
