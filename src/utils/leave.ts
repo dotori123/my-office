@@ -36,18 +36,30 @@ export const yearEndOutcome = (remaining: number) => {
 /** 연말이 다가올수록 경고를 세게 한다 */
 export type ExpiryLevel = 'info' | 'warn' | 'urgent'
 
+/** 연말까지 남은 날 */
+const daysToYearEnd = (base: string) => diffDays(base, `${base.slice(0, 4)}-12-31`)
+
+/**
+ * 소멸 안내를 보여줄 때인지 — 소멸될 연차가 있고 연말이 100일 안쪽 (대략 4분기부터).
+ * 연차 바와 안내 문구가 같은 때에 나오도록 한곳에서 정한다.
+ */
+export const showsExpiry = (remaining: number, base = today()) => {
+  const daysLeft = daysToYearEnd(base)
+  return yearEndOutcome(remaining).expire > 0 && daysLeft >= 0 && daysLeft <= 100
+}
+
 /**
  * 연말까지 남은 연차가 어떻게 되는지 미리 알려주기 위한 값.
- * 소멸될 연차가 있고 연말이 100일 안쪽일 때만 보여준다 (대략 4분기부터).
+ * 보여줄지는 showsExpiry 로 정한다.
  */
 export const yearEndOutlook = (remaining: number, ctx: DayOffContext, base = today()) => {
   const end = `${base.slice(0, 4)}-12-31`
-  const daysLeft = diffDays(base, end)
+  const daysLeft = daysToYearEnd(base)
   const { payout, expire, limit } = yearEndOutcome(remaining)
   const workingDaysLeft = countWorkingDays(base, end, ctx)
   const level: ExpiryLevel = daysLeft <= 30 ? 'urgent' : daysLeft <= 60 ? 'warn' : 'info'
   return {
-    show: expire > 0 && daysLeft >= 0 && daysLeft <= 100,
+    show: showsExpiry(remaining, base),
     payout,
     expire,
     limit,

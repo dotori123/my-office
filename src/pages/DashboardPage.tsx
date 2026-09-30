@@ -144,9 +144,9 @@ export default function DashboardPage() {
               {leave.planned > 0 && ` · 예정 ${fmtDays(leave.planned)}`}
             </p>
             <LeaveBar used={leave.used} planned={leave.planned} remaining={leave.remaining} className="mt-6" />
-            <p className="mt-2 flex justify-between text-micro text-mid">
+            <p className="mt-2 flex justify-between gap-3 text-micro text-mid">
               <LeaveBarLegend planned={leave.planned} remaining={leave.remaining} />
-              <span>사용률 {leave.usageRate}%</span>
+              <span className="shrink-0">사용률 {leave.usageRate}%</span>
             </p>
             {/* 연말이 가까우면 사라질 연차를 알려준다 — 12월엔 눈에 띄게 */}
             {outlook.show && (

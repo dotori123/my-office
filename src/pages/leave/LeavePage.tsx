@@ -135,9 +135,9 @@ function StatusTab({
           <p className="text-body-sm text-mid">총 {fmtDays(summary.total)}</p>
         </div>
         <LeaveBar used={summary.used} planned={summary.planned} remaining={summary.remaining} className="mt-6 h-2.5" />
-        <p className="mt-2 flex justify-between text-micro text-mid">
+        <p className="mt-2 flex justify-between gap-3 text-micro text-mid">
           <LeaveBarLegend planned={summary.planned} remaining={summary.remaining} />
-          <span>사용률 {summary.usageRate}%</span>
+          <span className="shrink-0">사용률 {summary.usageRate}%</span>
         </p>
         <div className="mt-6 grid grid-cols-3 gap-3">
           <Stat label="사용" value={fmtDays(summary.used)} />

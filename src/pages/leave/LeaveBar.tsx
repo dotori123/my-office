@@ -1,9 +1,10 @@
 import { cx } from '@/components/ui'
-import { yearEndOutcome } from '@/utils/leave'
+import { showsExpiry, yearEndOutcome } from '@/utils/leave'
 
 /**
- * 연차 바 — 사용 · 예정 · 남은 연차를 한 줄에 나눠 칠한다.
- * 남은 연차 중 연말에 수당으로 받을 수 있는 만큼은 파랗게 보여 준다.
+ * 연차 바 — 사용 · 예정을 칠하고, 남은 칸은 비워 둔다.
+ * 연말이 가까워지면 남은 칸 중 안 쓰면 사라질 몫을 주황으로 칠한다.
+ * 수당으로 받을 몫은 빈칸 그대로 (아래 안내 문구가 설명한다).
  */
 export function LeaveBar({
   used,
@@ -17,11 +18,16 @@ export function LeaveBar({
   className?: string
 }) {
   const { payout, expire } = yearEndOutcome(remaining)
+  const expiring = showsExpiry(remaining)
   const parts = [
     { key: 'used', label: '사용', days: Math.max(0, used), color: 'bg-ink' },
     { key: 'planned', label: '예정', days: Math.max(0, planned), color: 'bg-ink/30' },
-    { key: 'expire', label: '남음', days: expire, color: 'bg-transparent' },
-    { key: 'payout', label: '수당 가능', days: payout, color: 'bg-blue' },
+    ...(expiring
+      ? [
+          { key: 'expire', label: '안 쓰면 사라짐', days: expire, color: 'bg-ember/40' },
+          { key: 'payout', label: '수당', days: payout, color: 'bg-transparent' },
+        ]
+      : [{ key: 'remaining', label: '잔여', days: Math.max(0, remaining), color: 'bg-transparent' }]),
   ]
   const sum = parts.reduce((s, p) => s + p.days, 0)
 
@@ -43,15 +49,15 @@ export function LeaveBar({
   )
 }
 
-/** 바 아래 색 설명 */
+/** 바 아래 색 설명 — 칠해진 색만 */
 export function LeaveBarLegend({ planned, remaining }: { planned: number; remaining: number }) {
   const items = [
     { label: '사용', color: 'bg-ink' },
     ...(planned > 0 ? [{ label: '예정', color: 'bg-ink/30' }] : []),
-    ...(remaining > 0 ? [{ label: '수당 가능', color: 'bg-blue' }] : []),
+    ...(showsExpiry(remaining) ? [{ label: '사라질 연차', color: 'bg-ember/40' }] : []),
   ]
   return (
-    <span className="flex items-center gap-3">
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {items.map((i) => (
         <span key={i.label} className="flex items-center gap-1">
           <span className={cx('size-2 rounded-full', i.color)} />
